@@ -58,7 +58,14 @@ requestAnimationFrame(frame);
 const cur = $('#cursor');
 if (!touch) {
   let cx = 0, cy = 0;
-  addEventListener('pointermove', () => cur.classList.add('on'), { once: true });
+  const dot = $('#cursorDot'), root = document.documentElement;
+  // the system arrow is hidden only once the custom cursor is actually running (mouse/pen, never touch)
+  addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') return;
+    root.classList.add('cursor-on'); cur.classList.add('on'); dot.classList.add('on');
+    dot.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+  });
+  root.addEventListener('mouseleave', () => { cur.classList.remove('on'); dot.classList.remove('on'); });
   (function loop() {
     cx += (mouse.x - cx) * .2; cy += (mouse.y - cy) * .2;
     cur.style.transform = `translate(${cx}px,${cy}px)`;

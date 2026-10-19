@@ -534,3 +534,9 @@ a,button,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulati
 .pf>i{font-style:normal;font-size:1.8rem;color:var(--red);transition:transform .4s var(--ease)}
 .pf:hover>i{transform:translateX(8px)}
 @media (max-width:900px){.pf{padding:1.4rem;gap:1rem}.pf-ico{width:52px;height:52px;font-size:1.5rem}}
+
+/* custom cursor: hide the system arrow once the custom one is running; dot = exact pointer position */
+.cursor-dot{position:fixed;left:0;top:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.65),0 0 14px rgba(255,31,45,.9);pointer-events:none;z-index:121;opacity:0;transition:opacity .2s}
+.cursor-dot.on{opacity:1}
+html.cursor-on,html.cursor-on *{cursor:none!important}
+@media (hover:none){.cursor-dot{display:none}}
