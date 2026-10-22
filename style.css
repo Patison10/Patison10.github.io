@@ -91,10 +91,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 .nav-cta{font-size:.85rem;font-weight:700;background:var(--red);color:#000;padding:.55rem 1.1rem;border-radius:99px;display:inline-block}
 
 /* hero */
-.hero{min-height:100svh;display:flex;align-items:center;padding:120px var(--pad) 100px;overflow:hidden}
+.hero{min-height:100svh;display:flex;align-items:center;padding:120px var(--pad) calc(var(--word-h,0px) + 48px);overflow:hidden}
 #grid{position:absolute;inset:0;width:100%;height:100%}
 .glow{position:absolute;left:0;top:0;width:680px;height:680px;margin:-340px 0 0 -340px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,31,45,.28),transparent 62%);mix-blend-mode:screen;will-change:transform}
-.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 40% 50%,transparent 35%,var(--bg) 92%)}
+.hero::after{display:none}
 .hero-inner{position:relative;z-index:2;max-width:1100px}
 .badge{display:inline-flex;gap:.6rem;align-items:center;font-size:.82rem;color:#d6d6d6;border:1px solid rgba(255,31,45,.5);background:rgba(255,31,45,.08);border-radius:99px;padding:.5rem 1rem;margin-bottom:2rem;animation:up 1s .1s both}
 .badge i{width:7px;height:7px;border-radius:50%;background:var(--red);animation:ping 1.8s infinite}
@@ -445,7 +445,7 @@ a,button,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulati
   .nav-cta{padding:.75rem 1.3rem;font-size:.9rem}
   .logo{padding:.55rem 0}
 
-  .hero{padding:96px 20px 96px;min-height:100svh}
+  .hero{padding:96px 20px calc(var(--word-h,0px) + 36px);min-height:100svh}
   .hero-inner{max-width:100%}
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
   .actions .btn{justify-content:center;width:100%;padding-inline:.8rem;font-size:.92rem}
@@ -544,3 +544,12 @@ html.cursor-on,html.cursor-on *{cursor:none!important}
 /* fallback contact when Kwork is unreachable */
 .fallback{color:#fff;font-weight:600;text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:3px;transition:color .2s}
 .fallback:hover{color:var(--red)}
+
+/* the scroll hint / meta row is replaced by the halftone word at the bottom of the hero */
+.hero-meta{display:none}
+
+/* desktop: keep the hero + the halftone word inside the first screen */
+@media (min-width:1100px){
+  .hero{padding:92px var(--pad) calc(var(--word-h,0px) + 24px)}
+  .trust{margin-top:2rem}
+}

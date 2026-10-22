@@ -5,54 +5,132 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const mouse = { x: innerWidth * .6, y: innerHeight * .45, moved: false };
 addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true; });
 
-/* ---------- hero: generative flow field (b/w lines, red near cursor) ---------- */
-const cv = $('#grid'), ctx = cv.getContext('2d');
+/* ---------- hero: halftone wordmark ---------- */
+// A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
+// letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
+// springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
+const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero'), glow = $('#glow');
 const lite = touch || innerWidth < 900;
-const dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
-let W, H, ps = [];
-const glow = $('#glow');
-let heroVisible = true, sx = innerWidth * .6, sy = innerHeight * .45;
-function spawn(p) { p.x = Math.random() * W; p.y = Math.random() * H; p.px = p.x; p.py = p.y; p.life = 80 + Math.random() * 220; return p; }
-function resize() {
-  const r = cv.getBoundingClientRect();
-  W = r.width; H = r.height;
-  cv.width = W * dpr; cv.height = H * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H);
-  ps = Array.from({ length: lite ? Math.min(380, Math.round(W * H / 4200)) : Math.min(1100, Math.round(W * H / 1700)) }, () => spawn({}));
-}
-let lastW = innerWidth;
-addEventListener('resize', () => { if (innerWidth !== lastW) { lastW = innerWidth; resize(); } });
-resize();
-new IntersectionObserver(e => heroVisible = e[0].isIntersecting).observe($('#hero'));
+const HW = {
+  word: 'продажи', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .1 : .26,
+  ink: [196, 196, 196], warm: [255, 31, 45], bg: '#050505'
+};
+let W = 0, H = 0, dpr = 1, dots = new Float32Array(0), count = 0;
+let px = -1e5, py = -1e5, ring = { x: 0, y: 0, t: -1 };
+let raf = 0, visible = true, awake = true, sx = innerWidth * .62, sy = innerHeight * .38;
 
-function field(x, y, t) {
-  return Math.sin(x * .0028 + t * .00018) * 2.4 + Math.cos(y * .0035 - t * .00014) * 2.1 + Math.sin((x + y) * .0016 + t * .0001) * 1.6;
+function layout() {
+  const m = document.createElement('canvas').getContext('2d');
+  W = Math.max(1, Math.round(hero.getBoundingClientRect().width));
+  m.font = `${HW.weight} 100px ${HW.face}`;
+  const measured = m.measureText(HW.word).width;
+  const size = measured > 0 ? W * 1.02 / measured * 100 : 100;
+  m.font = `${HW.weight} ${size}px ${HW.face}`;
+  const box = m.measureText(HW.word);
+  const cap = box.actualBoundingBoxAscent || size * .72;
+
+  // the hero grows to leave room for the visible part of the word under the text
+  hero.style.setProperty('--word-h', Math.round(cap * (1 - HW.crop)) + 'px');
+  H = Math.max(1, Math.round(hero.getBoundingClientRect().height));
+  dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+
+  const mask = document.createElement('canvas'); mask.width = W; mask.height = H;
+  const mc = mask.getContext('2d', { willReadFrequently: true });
+  mc.font = `${HW.weight} ${size}px ${HW.face}`; mc.fillStyle = '#000'; mc.textBaseline = 'alphabetic';
+  mc.fillText(HW.word, (W - box.width) / 2, H + cap * HW.crop);
+  const img = mc.getImageData(0, 0, W, H).data;
+
+  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      let sum = 0; // coverage: average alpha over a 3x3 sample of the cell
+      for (let sy2 = 0; sy2 < 3; sy2++) for (let sx2 = 0; sx2 < 3; sx2++) {
+        const x = Math.min(W - 1, Math.floor(gx * gap + (sx2 + .5) * gap / 3));
+        const y = Math.min(H - 1, Math.floor(gy * gap + (sy2 + .5) * gap / 3));
+        sum += img[(y * W + x) * 4 + 3];
+      }
+      const cov = sum / (9 * 255);
+      if (cov < .06) continue;
+      const hx = gx * gap + gap / 2, hy = gy * gap + gap / 2;
+      tmp.push(hx, hy, 0, 0, hx, hy, Math.sqrt(cov) * gap * .56); // x y vx vy homeX homeY radius
+    }
+  }
+  dots = new Float32Array(tmp); count = tmp.length / 7;
+  awake = true;
 }
-function frame(t) {
-  requestAnimationFrame(frame);
-  if (!heroVisible) return;
-  const r = cv.getBoundingClientRect();
-  const tx = mouse.moved ? mouse.x - r.left : W * .65 + Math.cos(t / 1700) * W * .12;
-  const ty = mouse.moved ? mouse.y - r.top : H * .45 + Math.sin(t / 1300) * H * .12;
-  sx += (tx - sx) * .1; sy += (ty - sy) * .1;
+
+function draw(now) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = HW.bg; ctx.fillRect(0, 0, W, H);
+
+  // soft red light that follows the pointer
+  const tx = px > -1e4 ? px : W * .62, ty = py > -1e4 ? py : H * .38;
+  sx += (tx - sx) * .12; sy += (ty - sy) * .12;
   glow.style.transform = `translate(${sx}px,${sy}px)`;
 
-  ctx.fillStyle = 'rgba(5,5,5,.1)'; ctx.fillRect(0, 0, W, H);
-  ctx.lineWidth = .9;
-  const R = 260;
-  for (const p of ps) {
-    let a = field(p.x, p.y, t);
-    const dx = p.x - sx, dy = p.y - sy, dist = Math.hypot(dx, dy), k = Math.max(0, 1 - dist / R);
-    if (k > 0) a += (Math.atan2(dy, dx) + 1.9 - a) * k * k * .9;
-    p.px = p.x; p.py = p.y;
-    p.x += Math.cos(a) * (1 + k * 2.2); p.y += Math.sin(a) * (1 + k * 2.2);
-    if (--p.life < 0 || p.x < 0 || p.x > W || p.y < 0 || p.y > H) { spawn(p); continue; }
-    ctx.strokeStyle = k > .04 ? `rgba(255,${40 + (1 - k) * 150 | 0},${48 + (1 - k) * 150 | 0},${.35 + k * .65})` : 'rgba(255,255,255,.22)';
-    ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
+  const r = reduce ? 0 : HW.radius;
+  const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9;
+  const [ir, ig, ib] = HW.ink, [wr, wg, wb] = HW.warm;
+  const rest = new Path2D();
+  let moving = false;
+  for (let i = 0; i < count; i++) {
+    const j = i * 7;
+    let x = dots[j], y = dots[j + 1], vx = dots[j + 2], vy = dots[j + 3];
+    const hx = dots[j + 4], hy = dots[j + 5], rad = dots[j + 6];
+    if (!reduce) {
+      if (age < 900) { // shock ring from a click
+        const dx = hx - ring.x, dy = hy - ring.y, d = Math.sqrt(dx * dx + dy * dy) + .001;
+        const band = 1 - Math.min(1, Math.abs(d - ringR) / 26);
+        if (band > 0) { const f = band * 3.2 * (1 - age / 900); vx += dx / d * f; vy += dy / d * f; }
+      }
+      const ddx = x - px, ddy = y - py, d2 = ddx * ddx + ddy * ddy;
+      if (r > 0 && d2 < r * r) { // push away from the pointer
+        const d = Math.sqrt(d2) + .001, f = (1 - d / r) * 2.6;
+        vx += ddx / d * f; vy += ddy / d * f;
+      }
+      vx = (vx + (hx - x) * .05) * .84; vy = (vy + (hy - y) * .05) * .84; // spring back home
+      x += vx; y += vy;
+      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) moving = true;
+      else { x = hx; y = hy; vx = 0; vy = 0; }
+      dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
+    }
+    const k = Math.min(1, Math.hypot(x - hx, y - hy) / 28); // warmth: 0 at home, 1 when far
+    if (k > .02) {
+      ctx.fillStyle = `rgb(${Math.round(ir + (wr - ir) * k)},${Math.round(ig + (wg - ig) * k)},${Math.round(ib + (wb - ib) * k)})`;
+      ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
+    } else { rest.moveTo(x + rad, y); rest.arc(x, y, rad, 0, 6.2832); }
   }
+  ctx.fillStyle = `rgb(${ir},${ig},${ib})`; ctx.fill(rest);
+  awake = !reduce && (moving || age < 900 || px > -1e4); // sleep once everything is home and nothing pushes
 }
-requestAnimationFrame(frame);
+function loop(now) { raf = 0; if (!visible) return; draw(now); if (awake) raf = requestAnimationFrame(loop); }
+function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
+
+const local = e => { const b = hero.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; [px, py] = local(e); wake(); });
+hero.addEventListener('pointerleave', () => { px = py = -1e5; wake(); });
+hero.addEventListener('pointerdown', e => {
+  if (reduce || e.target.closest('a,button')) return;
+  const p = local(e); ring = { x: p[0], y: p[1], t: performance.now() }; wake();
+});
+new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(hero);
+
+// re-lay out only when the hero's size really changes (fonts landing, text reflow, window resize)
+let pending = 0;
+new ResizeObserver(() => {
+  if (pending) return;
+  pending = requestAnimationFrame(() => {
+    pending = 0;
+    const b = hero.getBoundingClientRect();
+    if (Math.round(b.width) !== W || Math.round(b.height) !== H) { layout(); wake(); }
+  });
+}).observe(hero);
+
+layout(); draw(performance.now()); wake();
+// the word is set in the real face once it has loaded
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); wake(); });
 
 /* ---------- cursor ---------- */
 const cur = $('#cursor');
