@@ -559,7 +559,7 @@ html{overflow-x:clip}
 
 /* ===== text-zone scrim: the background layers are dimmed behind the hero copy ===== */
 .hero-inner::before{content:"";position:absolute;inset:-70px -90px -50px -70px;z-index:-1;pointer-events:none;
-  background:radial-gradient(ellipse 75% 70% at 38% 52%,rgba(5,5,5,.9),rgba(5,5,5,.74) 50%,rgba(5,5,5,0) 100%)}
+  background:radial-gradient(ellipse 75% 70% at 38% 52%,rgba(5,5,5,.5),rgba(5,5,5,.34) 50%,rgba(5,5,5,0) 100%)}
 
 /* ===== performance: cheaper compositing, no animated full-screen layers ===== */
 .grain{animation:none;mix-blend-mode:normal;opacity:.04;inset:0}
@@ -586,4 +586,57 @@ html{overflow-x:clip}
   .chan{background:linear-gradient(110deg,rgba(64,14,20,.92),rgba(16,16,18,.94))}
   .nav{background:rgba(8,8,8,.92)}
   .ambient,.grain{display:none}
+}
+
+/* ===== «Ваш вкус»: calculator package ===== */
+.custom{position:relative;isolation:isolate;margin-top:16px;padding:clamp(1.4rem,3vw,2.4rem);border-radius:28px;
+  background:linear-gradient(150deg,rgba(255,31,45,.14),rgba(255,255,255,.03) 45%,rgba(255,255,255,.05));
+  border:1px solid rgba(255,31,45,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 30px 90px -40px rgba(255,31,45,.55);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}
+.cu-head{max-width:46em}
+.cu-head .tag{position:static;display:inline-block;margin-bottom:1rem}
+.cu-head h3{font-size:clamp(1.8rem,3.4vw,2.8rem);letter-spacing:-.04em;font-weight:900}
+.cu-head p{margin-top:.6rem;color:#a8a8a8;line-height:1.6}
+.cu-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:clamp(1.4rem,3vw,2.6rem);margin-top:2rem;align-items:start}
+.cu-group{margin-bottom:1.8rem}
+.cu-group h4{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);font-weight:500;text-transform:uppercase;margin-bottom:.8rem}
+.cu-styles{display:flex;flex-wrap:wrap;gap:.5rem}
+.cu-style,.cu-presets button{font:inherit;font-size:.9rem;color:#ddd;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:.6rem 1rem;cursor:pointer;transition:background .25s,border-color .25s,color .25s}
+.cu-style:hover,.cu-presets button:hover{border-color:#fff}
+.cu-style.on{background:var(--red);border-color:var(--red);color:#000;font-weight:700}
+.cu-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:.9rem;padding:.8rem 0;border-bottom:1px solid var(--line);transition:background .25s}
+.cu-row.on .cu-info b{color:var(--red)}
+.cu-info b{display:block;font-size:1rem;font-weight:700;letter-spacing:-.01em;transition:color .25s}
+.cu-info span{display:block;color:var(--muted);font-size:.82rem;line-height:1.4}
+.cu-price{font-style:normal;font-family:var(--mono);font-size:.8rem;color:#bbb;white-space:nowrap}
+.stp{display:inline-flex;align-items:center;gap:.3rem;border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:.2rem;background:rgba(255,255,255,.04)}
+.stp button{width:40px;height:40px;border-radius:50%;border:0;font:inherit;font-size:1.3rem;line-height:1;color:#fff;background:rgba(255,255,255,.08);cursor:pointer;transition:background .2s,color .2s,opacity .2s}
+.stp button:hover:not(:disabled){background:var(--red);color:#000}
+.stp button:disabled{opacity:.3;cursor:default}
+.stp output{min-width:2.2ch;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.cu-form textarea{width:100%;resize:vertical;font:inherit;font-size:.95rem;color:#fff;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:.9rem 1rem;outline:none;transition:border-color .25s}
+.cu-form textarea:focus{border-color:var(--red)}
+.cu-form textarea::placeholder{color:#777}
+.cu-sum{position:sticky;top:96px;display:flex;flex-direction:column;gap:.7rem;padding:1.4rem;border-radius:22px;background:rgba(8,8,10,.72);border:1px solid rgba(255,255,255,.14)}
+.cu-presets{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin-bottom:.4rem}
+.cu-presets span{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;color:var(--muted);width:100%}
+.cu-presets button{font-size:.78rem;padding:.4rem .8rem}
+.cu-sum small{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;color:var(--muted)}
+.cu-total{font-size:clamp(2.4rem,4.4vw,3.6rem);font-weight:900;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}
+.cu-days{font-size:.85rem;color:#bbb}
+.cu-list{display:grid;gap:.35rem;margin:.4rem 0;padding:.8rem 0;border-block:1px solid var(--line);font-size:.82rem;color:#bbb}
+.cu-list li{display:flex;justify-content:space-between;gap:1rem}
+.cu-list b{font-weight:600;color:#fff;white-space:nowrap}
+.cu-advice{font-size:.88rem;line-height:1.5;color:#e8e8e8}
+.cu-sum .btn{justify-content:center}
+.cu-copied{color:#4ade80!important;letter-spacing:.04em!important;text-transform:none;font-size:.78rem!important}
+.cu-copied[hidden]{display:none}
+
+@media (max-width:900px){
+  .cu-grid{grid-template-columns:1fr}
+  .cu-sum{position:static}
+  .custom{-webkit-backdrop-filter:none;backdrop-filter:none;background:linear-gradient(150deg,rgba(64,14,20,.9),rgba(16,16,18,.94))}
+  .cu-row{grid-template-columns:minmax(0,1fr) auto}
+  .cu-price{grid-row:2;grid-column:1}
+  .stp{grid-row:1 / span 2;grid-column:2}
 }

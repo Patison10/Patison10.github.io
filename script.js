@@ -456,6 +456,153 @@ if (iris && eyeSvg && !reduce) {
   })();
 }
 
+/* ---------- pricing calculator: «Ваш вкус» ---------- */
+// Every price lives in CFG. Source: the Kwork offer: base 7 000 (Эконом), «+5 блоков» 4 000, «Telegram-бот» 3 000.
+// The options of the packages are 750 each: the 3 000 ₽ step between the packages split over its 4 options, so a full
+// «Стандарт» adds up to 10 000 and a full «Бизнес» to 13 000, exactly like the packages.
+(() => {
+  const root = $('#custom');
+  if (!root) return;
+  const kworkHref = $('a[href*="kwork.ru/website-development"]').href;
+  const TG = 'https://t.me/Patisonooochik';
+  const CFG = {
+    base: { price: 7000, blocks: 7, days: 3 },
+    pack: { size: 5, price: 4000, max: 8 },
+    styles: ['Тёмный минимализм', 'Светлый и чистый', 'Яркий и дерзкий', 'Строгий деловой', 'Свой вариант'],
+    options: [
+      { id: 'domain', group: 'std', label: 'Доменное имя', desc: 'Подключение домена к сайту', price: 750 },
+      { id: 'seo', group: 'std', label: 'SEO-оптимизация', desc: 'Заголовки и описание для поиска', price: 750 },
+      { id: 'form', group: 'std', label: 'Форма обратной связи', desc: 'Заявки в Telegram или на почту', price: 750 },
+      { id: 'pics', group: 'std', label: 'Подбор картинок', desc: 'Изображения под ваш бизнес', price: 750 },
+      { id: 'order', group: 'biz', label: 'Форма заказа', desc: 'Клиент оформляет заказ на сайте', price: 750 },
+      { id: 'chat', group: 'biz', label: 'Онлайн-консультант', desc: 'Чат для быстрых вопросов', price: 750 },
+      { id: 'content', group: 'biz', label: 'Наполнение контентом', desc: 'Тексты и материалы за вас', price: 750 },
+      { id: 'metrika', group: 'biz', label: 'Яндекс Метрика', desc: 'Аналитика посещений', price: 750 },
+      { id: 'bot', group: 'extra', label: 'Telegram-бот на вашем облаке', desc: 'Бот для заявок и уведомлений', price: 3000 },
+      { id: 'admin', group: 'extra', label: 'Админ-панель', desc: 'Цену назову после обсуждения', price: 0, ask: true }
+    ]
+  };
+  const fmt = n => n.toLocaleString('ru-RU') + ' ₽';
+  const state = { packs: 0, style: CFG.styles[0], qty: Object.fromEntries(CFG.options.map(o => [o.id, 0])) };
+  const ids = g => CFG.options.filter(o => o.group === g).map(o => o.id);
+  const GROUPS = { std: ids('std'), biz: ids('biz') };
+
+  // ---- build the rows ----
+  const row = (id, label, desc, price, value) => `<div class="cu-row" data-id="${id}">
+    <div class="cu-info"><b>${label}</b><span>${desc}</span></div><em class="cu-price">${price}</em>
+    <div class="stp"><button type="button" data-d="-1" aria-label="Убрать: ${label}">−</button><output>${value}</output><button type="button" data-d="1" aria-label="Добавить: ${label}">+</button></div></div>`;
+  $('#cuBlocks').innerHTML = row('blocks', 'Количество блоков', `В основе до ${CFG.base.blocks}, добавляем по ${CFG.pack.size}`, '+' + fmt(CFG.pack.price) + ' за +' + CFG.pack.size, CFG.base.blocks);
+  for (const g of ['std', 'biz', 'extra']) {
+    $('#cu' + g[0].toUpperCase() + g.slice(1)).innerHTML = CFG.options.filter(o => o.group === g)
+      .map(o => row(o.id, o.label, o.desc, o.ask ? 'по договорённости' : '+' + fmt(o.price), 0)).join('');
+  }
+  $('#cuStyles').innerHTML = CFG.styles.map(s => `<button type="button" class="cu-style" aria-pressed="false">${s}</button>`).join('');
+  const presets = [['econ', 'Как «Эконом»'], ['std', 'Как «Стандарт»'], ['biz', 'Как «Бизнес»']];
+  $('#cuPresets').insertAdjacentHTML('beforeend', presets.map(p => `<button type="button" data-preset="${p[0]}">${p[1]}</button>`).join(''));
+
+  // ---- logic ----
+  const selected = g => GROUPS[g].filter(id => state.qty[id] > 0);
+  const calc = () => {
+    let total = CFG.base.price + state.packs * CFG.pack.price, ask = false;
+    const lines = [['Основа: адаптивный лендинг, хостинг, правки без лимита', CFG.base.price]];
+    if (state.packs) lines.push([`+${state.packs * CFG.pack.size} блоков`, state.packs * CFG.pack.price]);
+    for (const o of CFG.options) {
+      if (!state.qty[o.id]) continue;
+      if (o.ask) { ask = true; lines.push([o.label + ' (цена по договорённости)', null]); continue; }
+      total += o.price * state.qty[o.id]; lines.push([o.label, o.price * state.qty[o.id]]);
+    }
+    const std = selected('std').length, biz = selected('biz').length;
+    const days = biz ? 7 : std ? 5 : CFG.base.days;
+    const sameSet = (sel, want) => sel.length === want.length && want.every(id => sel.includes(id));
+    let pkg = null;
+    if (!state.qty.admin) {
+      if (!std && !biz) pkg = 'Эконом';
+      else if (sameSet(selected('std'), GROUPS.std) && !biz) pkg = 'Стандарт';
+      else if (sameSet(selected('std'), GROUPS.std) && sameSet(selected('biz'), GROUPS.biz)) pkg = 'Бизнес';
+    }
+    return { total, ask, lines, days, pkg };
+  };
+
+  let shown = CFG.base.price, tween = 0;
+  const showTotal = to => {
+    cancelAnimationFrame(tween);
+    const from = shown, t0 = performance.now();
+    if (reduce) { shown = to; $('#cuTotal').textContent = fmt(to); return; }
+    (function f(t) {
+      const p = Math.min(1, (t - t0) / 260);
+      shown = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+      $('#cuTotal').textContent = fmt(shown);
+      if (p < 1) tween = requestAnimationFrame(f);
+    })(t0);
+  };
+
+  const message = r => [
+    'Здравствуйте, Максим! Хочу лендинг «Ваш вкус».',
+    'Стиль: ' + state.style,
+    'Блоков: ' + (CFG.base.blocks + state.packs * CFG.pack.size),
+    'Опции: ' + (CFG.options.filter(o => state.qty[o.id]).map(o => o.label).join(', ') || 'без дополнительных'),
+    ($('#cuWish').value.trim() ? 'Пожелания: ' + $('#cuWish').value.trim() : ''),
+    `Ориентировочно: ${fmt(r.total)}${r.ask ? ' + админ-панель (по договорённости)' : ''}, срок от ${r.days} дней`
+  ].filter(Boolean).join('\n');
+
+  function render() {
+    const r = calc();
+    showTotal(r.total);
+    $('#cuDays').textContent = `срок: от ${r.days} дней, правки без лимита${r.ask ? ', админ-панель обсудим' : ''}`;
+    $('#cuList').innerHTML = r.lines.map(l => `<li><span>${l[0]}</span><b>${l[1] === null ? '—' : fmt(l[1])}</b></li>`).join('');
+    const extras = state.packs || state.qty.bot;
+    $('#cuAdvice').textContent = r.pkg
+      ? `Это пакет «${r.pkg}»${extras ? ' с доп. услугами' : ''}: его можно оформить сразу на Kwork.`
+      : 'Индивидуальный набор: напишите в Telegram, соберём точное предложение и оформим заказ на Kwork.';
+    $('#cuKwork').classList.toggle('primary', !!r.pkg); $('#cuKwork').classList.toggle('ghost', !r.pkg);
+    $('#cuTg').classList.toggle('primary', !r.pkg); $('#cuTg').classList.toggle('ghost', !!r.pkg);
+    $('#cuKwork').href = kworkHref;
+    $('#cuTg').href = TG + '?text=' + encodeURIComponent(message(r));
+    $$('.cu-row', root).forEach(el => {
+      const id = el.dataset.id, v = id === 'blocks' ? state.packs : state.qty[id];
+      const max = id === 'blocks' ? CFG.pack.max : 1;
+      $('output', el).textContent = id === 'blocks' ? CFG.base.blocks + state.packs * CFG.pack.size : v;
+      el.classList.toggle('on', v > 0);
+      el.querySelector('[data-d="-1"]').disabled = v <= 0;
+      el.querySelector('[data-d="1"]').disabled = v >= max;
+    });
+    $$('.cu-style', root).forEach(b => { const on = b.textContent === state.style; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    syncSticky();
+  }
+
+  root.addEventListener('click', e => {
+    const step = e.target.closest('[data-d]'), st = e.target.closest('.cu-style'), pr = e.target.closest('[data-preset]');
+    if (step) {
+      const id = step.closest('.cu-row').dataset.id, d = +step.dataset.d;
+      if (id === 'blocks') state.packs = Math.max(0, Math.min(CFG.pack.max, state.packs + d));
+      else state.qty[id] = Math.max(0, Math.min(1, state.qty[id] + d));
+    } else if (st) state.style = st.textContent;
+    else if (pr) {
+      const want = pr.dataset.preset === 'econ' ? [] : pr.dataset.preset === 'std' ? GROUPS.std : GROUPS.std.concat(GROUPS.biz);
+      [...GROUPS.std, ...GROUPS.biz].forEach(id => state.qty[id] = want.includes(id) ? 1 : 0);
+    } else return;
+    render();
+  });
+  $('#cuWish').addEventListener('input', () => { $('#cuTg').href = TG + '?text=' + encodeURIComponent(message(calc())); });
+  // best effort: put the order text on the clipboard when the client goes to Telegram / Kwork
+  const copy = () => {
+    const text = message(calc()), note = $('#cuCopied');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { note.hidden = false; setTimeout(() => note.hidden = true, 6000); }, () => {});
+  };
+  $('#cuTg').addEventListener('click', copy); $('#cuKwork').addEventListener('click', copy);
+
+  // phones: while the calculator is on screen the bottom button shows the live total and jumps to the summary
+  const sticky = $('#sticky');
+  const stickyOrig = { text: sticky.textContent, href: sticky.getAttribute('href'), target: sticky.getAttribute('target') };
+  let inView = false;
+  function syncSticky() {
+    if (inView) { sticky.textContent = `Итого ${fmt(calc().total)} · к оформлению ↓`; sticky.setAttribute('href', '#cuSum'); sticky.removeAttribute('target'); }
+    else { sticky.textContent = stickyOrig.text; sticky.setAttribute('href', stickyOrig.href); if (stickyOrig.target) sticky.setAttribute('target', stickyOrig.target); }
+  }
+  new IntersectionObserver(e => { inView = e[0].isIntersecting && matchMedia('(max-width:900px)').matches; syncSticky(); }, { threshold: .05 }).observe($('.cu-form', root));
+  render();
+})();
+
 /* ---------- pause the CSS animations of everything that is off screen ---------- */
 const offObs = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('off', !e.isIntersecting)), { rootMargin: '120px' });
 $$('section, .marquee').forEach(el => offObs.observe(el));
