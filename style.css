@@ -640,3 +640,6 @@ html{overflow-x:clip}
   .cu-price{grid-row:2;grid-column:1}
   .stp{grid-row:1 / span 2;grid-column:2}
 }
+
+/* the red light behind the hero copy is fixed: the background no longer follows the pointer */
+.glow{left:62%;top:38%;will-change:auto}
