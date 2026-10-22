@@ -9,9 +9,9 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
 // A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
 // letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
 // springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
-// Kept cheap on purpose: the canvas covers only the band under the word (not the whole hero), only the columns where
-// dots are away from home are repainted (clipped, one path per warmth level), and nothing runs unless the pointer is
-// near the word or dots are still moving.
+// Kept cheap on purpose: the canvas covers only the band under the word (not the whole hero), dots of the same warmth
+// are filled in one path, and nothing runs unless the pointer is near the word or dots are still moving. The band is
+// always repainted as a whole: partial repaints left dark seams between the repainted and the untouched parts.
 const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
@@ -20,8 +20,7 @@ const HW = {
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
 const LK = 9; // warmth levels
-let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, gap = 0, warmCols = [], dots = new Float32Array(0), count = 0;
-let colStart = new Int32Array(0), colList = new Int32Array(0), prevX0 = 1e9, prevX1 = -1e9, full = true;
+let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, warmCols = [], dots = new Float32Array(0), count = 0;
 let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
 let raf = 0, visible = true, awake = true, cost = 0, skip = false, tick = 0;
 
@@ -50,7 +49,7 @@ function layout() {
   mc.fillText(HW.word, (W - box.width) / 2, H + cap * HW.crop);
   const img = mc.getImageData(0, 0, W, H).data;
 
-  gap = HW.gap; const cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
+  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
   rmax = gap * .56;
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
@@ -67,14 +66,6 @@ function layout() {
     }
   }
   dots = new Float32Array(tmp); count = tmp.length / 7;
-  // dots grouped by grid column: lets a repaint touch only the columns it needs
-  colStart = new Int32Array(cols + 2); colList = new Int32Array(count);
-  for (let i = 0; i < count; i++) colStart[Math.floor(dots[i * 7 + 4] / gap) + 1]++;
-  for (let c = 0; c <= cols; c++) colStart[c + 1] += colStart[c];
-  const fill = colStart.slice();
-  for (let i = 0; i < count; i++) colList[fill[Math.floor(dots[i * 7 + 4] / gap)]++] = i;
-  prevX0 = 1e9; prevX1 = -1e9; full = true;
-
   // one colour per warmth level (ink -> red); dots of the same level are filled together in a single path
   warmCols = Array.from({ length: LK }, (_, k) => {
     const t = k / (LK - 1);
@@ -88,7 +79,7 @@ function draw(now) {
   const r = reduce ? 0 : HW.radius, r2 = r * r;
   const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9, ringOn = age < 900;
   const pointer = px > -1e4;
-  let moving = false, x0 = 1e9, x1 = -1e9; // x0..x1: where dots are currently away from home
+  let moving = false;
   if (!reduce) {
     for (let i = 0; i < count; i++) {
       const j = i * 7;
@@ -109,38 +100,24 @@ function draw(now) {
       }
       vx = (vx + (hx - x) * .05) * .84; vy = (vy + (hy - y) * .05) * .84; // spring back home
       x += vx; y += vy;
-      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) {
-        moving = true;
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (hx < x0) x0 = hx; if (hx > x1) x1 = hx;
-      } else { x = hx; y = hy; vx = 0; vy = 0; }
+      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) moving = true;
+      else { x = hx; y = hy; vx = 0; vy = 0; }
       dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
     }
   }
 
-  // repaint only the columns where something is (or just was) away from home
-  let a, b;
-  if (full || reduce) { a = 0; b = W; }
-  else {
-    a = Math.min(x0, prevX0); b = Math.max(x1, prevX1);
-    if (a > b) { awake = !reduce && (ringOn || (pointer && now - lastMove < 500)); return; } // nothing moved, nothing to repaint
-    a = Math.max(0, a - rmax - 2); b = Math.min(W, b + rmax + 2);
-  }
+  // repaint the whole band: one path per warmth level (0 = at home, 8 = fully red)
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.save(); ctx.beginPath(); ctx.rect(a, 0, b - a, H); ctx.clip(); // clip = repainted dots never pile up on the edge
-  ctx.clearRect(a, 0, b - a, H);
-  const cols = colStart.length - 2, c0 = Math.max(0, Math.floor(a / gap) - 1), c1 = Math.min(cols - 1, Math.floor(b / gap) + 1);
   const paths = [];
-  for (let c = c0; c <= c1; c++) {
-    for (let q = colStart[c]; q < colStart[c + 1]; q++) {
-      const j = colList[q] * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
-      const k = Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))); // warmth: 0 at home
-      const pth = paths[k] || (paths[k] = new Path2D());
-      pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
-    }
+  for (let i = 0; i < count; i++) {
+    const j = i * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
+    const k = ox || oy ? Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))) : 0;
+    const pth = paths[k] || (paths[k] = new Path2D());
+    pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
   }
   for (let k = 0; k < LK; k++) if (paths[k]) { ctx.fillStyle = warmCols[k]; ctx.fill(paths[k]); }
-  ctx.restore();
-  prevX0 = x0; prevX1 = x1; full = false;
+
   cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
   skip = lite ? cost > 5 : cost > 7;
   awake = !reduce && (moving || ringOn || (pointer && now - lastMove < 500)); // sleep once everything is home and nothing pushes
