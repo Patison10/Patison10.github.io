@@ -17,7 +17,7 @@ const hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
   word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
-  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46, margin: lite ? 40 : 70,
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .08, margin: lite ? 40 : 70, fill: lite ? .94 : .9,
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
 const LK = 9; // warmth levels (Canvas 2D fallback)
@@ -75,11 +75,15 @@ function layout() {
   const m = document.createElement('canvas').getContext('2d');
   W = Math.max(1, Math.round(hero.getBoundingClientRect().width));
   m.font = `${HW.weight} 100px ${HW.face}`;
-  const measured = m.measureText(HW.word).width;
-  const size = measured > 0 ? W * 1.02 / measured * 100 : 100;
+  const probe = m.measureText(HW.word), measured = probe.width;
+  const capRatio = (probe.actualBoundingBoxAscent || 72) / 100; // letter height per 1px of font size
+  // The word fills most of the width, but it never gets taller than the room under the hero copy (on desktop about a fifth
+  // of the screen height) and it is only cropped a little: it has to stay readable, not just be a texture.
+  let size = measured > 0 ? W * HW.fill / measured * 100 : 100;
+  if (!lite) size = Math.min(size, Math.max(120, Math.min(220, innerHeight * .19)) / ((1 - HW.crop) * capRatio));
   m.font = `${HW.weight} ${size}px ${HW.face}`;
   const box = m.measureText(HW.word);
-  const cap = box.actualBoundingBoxAscent || size * .72;
+  const cap = capRatio * size;
 
   // the hero grows to leave room for the visible part of the word under the text; the canvas is only that band + a margin
   const wordH = Math.round(cap * (1 - HW.crop));
