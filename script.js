@@ -9,20 +9,67 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
 // A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
 // letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
 // springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
-// Kept cheap on purpose: the canvas covers only the band under the word (not the whole hero), dots of the same warmth
-// are filled in one path, and nothing runs unless the pointer is near the word or dots are still moving. The band is
-// always repainted as a whole: partial repaints left dark seams between the repainted and the untouched parts.
-const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero');
+// Kept cheap on purpose: the canvas covers only the band under the word, the dots are drawn on the GPU (WebGL points,
+// one draw call) with a Canvas 2D fallback, the pointer is handled once per frame, and nothing runs unless the pointer
+// is near the word or dots are still moving. The band is always repainted as a whole (partial repaints left seams).
+let cv = $('#grid'), ctx = null, gl = null, glLost = false;
+const hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
   word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
   gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46, margin: lite ? 40 : 70,
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
-const LK = 9; // warmth levels
-let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, warmCols = [], dots = new Float32Array(0), count = 0;
+const LK = 9; // warmth levels (Canvas 2D fallback)
+let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, warmCols = [], dots = new Float32Array(0), vbo = new Float32Array(0), count = 0;
 let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
 let raf = 0, visible = true, awake = true, cost = 0, skip = false, tick = 0;
+
+// ---- GPU renderer: every dot is one point; the fragment shader draws the anti-aliased disc ----
+const VS = `attribute vec2 a_pos; attribute float a_rad; attribute float a_k;
+uniform vec2 u_res; uniform float u_dpr; varying float v_k; varying float v_r; varying float v_s;
+void main() {
+  gl_Position = vec4(a_pos.x / u_res.x * 2.0 - 1.0, 1.0 - a_pos.y / u_res.y * 2.0, 0.0, 1.0);
+  float s = (a_rad * 2.0 + 2.0) * u_dpr;
+  gl_PointSize = s; v_s = s; v_r = a_rad * u_dpr; v_k = a_k;
+}`;
+const FS = `precision mediump float; uniform vec3 u_ink; uniform vec3 u_warm; varying float v_k; varying float v_r; varying float v_s;
+void main() {
+  float d = length(gl_PointCoord - vec2(0.5)) * v_s;
+  float a = clamp(v_r - d + 0.5, 0.0, 1.0);
+  gl_FragColor = vec4(mix(u_ink, u_warm, v_k) * a, a);
+}`;
+let glu = null;
+function initGL() {
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; };
+  const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+  if (!vs || !fs) return false;
+  const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  [['a_pos', 2, 0], ['a_rad', 1, 8], ['a_k', 1, 12]].forEach(([n, size, off]) => {
+    const l = gl.getAttribLocation(prog, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 16, off);
+  });
+  glu = { res: gl.getUniformLocation(prog, 'u_res'), dpr: gl.getUniformLocation(prog, 'u_dpr') };
+  gl.uniform3f(gl.getUniformLocation(prog, 'u_ink'), HW.ink[0] / 255, HW.ink[1] / 255, HW.ink[2] / 255);
+  gl.uniform3f(gl.getUniformLocation(prog, 'u_warm'), HW.warm[0] / 255, HW.warm[1] / 255, HW.warm[2] / 255);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0, 0, 0, 0);
+  return true;
+}
+function useCanvas2D() { // WebGL missing or broken: a canvas can never switch context type, so use a fresh one
+  if (gl) { const fresh = cv.cloneNode(false); cv.replaceWith(fresh); cv = fresh; gl = null; }
+  ctx = cv.getContext('2d');
+}
+if (!/[?&]gl=0\b/.test(location.search)) {
+  gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+  if (gl && !initGL()) useCanvas2D();
+  if (gl) {
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); glLost = true; });
+    cv.addEventListener('webglcontextrestored', () => { glLost = false; if (initGL()) { layout(); draw(performance.now()); } });
+  }
+}
+if (!gl) useCanvas2D();
 
 function layout() {
   const m = document.createElement('canvas').getContext('2d');
@@ -66,12 +113,42 @@ function layout() {
     }
   }
   dots = new Float32Array(tmp); count = tmp.length / 7;
-  // one colour per warmth level (ink -> red); dots of the same level are filled together in a single path
-  warmCols = Array.from({ length: LK }, (_, k) => {
-    const t = k / (LK - 1);
-    return `rgb(${HW.ink.map((v, i) => Math.round(v + (HW.warm[i] - v) * t)).join(',')})`;
-  });
+
+  if (gl) { // vertex buffer: x y radius warmth per dot
+    vbo = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) vbo[i * 4 + 2] = dots[i * 7 + 6];
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(glu.res, W, H); gl.uniform1f(glu.dpr, dpr);
+    gl.bufferData(gl.ARRAY_BUFFER, vbo, gl.DYNAMIC_DRAW);
+  } else { // one colour per warmth level (ink -> red); dots of the same level are filled together in a single path
+    warmCols = Array.from({ length: LK }, (_, k) => {
+      const t = k / (LK - 1);
+      return `rgb(${HW.ink.map((v, i) => Math.round(v + (HW.warm[i] - v) * t)).join(',')})`;
+    });
+  }
   awake = true;
+}
+
+function paint() {
+  if (gl) {
+    if (glLost) return;
+    for (let i = 0; i < count; i++) {
+      const j = i * 7, o = i * 4, x = dots[j], y = dots[j + 1], ox = x - dots[j + 4], oy = y - dots[j + 5];
+      vbo[o] = x; vbo[o + 1] = y; vbo[o + 3] = ox || oy ? Math.min(1, Math.sqrt(ox * ox + oy * oy) / 28) : 0; // warmth: 0 at home
+    }
+    gl.clear(gl.COLOR_BUFFER_BIT); gl.bufferSubData(gl.ARRAY_BUFFER, 0, vbo); gl.drawArrays(gl.POINTS, 0, count);
+    return;
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const paths = [];
+  for (let i = 0; i < count; i++) {
+    const j = i * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
+    const k = ox || oy ? Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))) : 0;
+    const pth = paths[k] || (paths[k] = new Path2D());
+    pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
+  }
+  for (let k = 0; k < LK; k++) if (paths[k]) { ctx.fillStyle = warmCols[k]; ctx.fill(paths[k]); }
 }
 
 function draw(now) {
@@ -105,19 +182,7 @@ function draw(now) {
       dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
     }
   }
-
-  // repaint the whole band: one path per warmth level (0 = at home, 8 = fully red)
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const paths = [];
-  for (let i = 0; i < count; i++) {
-    const j = i * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
-    const k = ox || oy ? Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))) : 0;
-    const pth = paths[k] || (paths[k] = new Path2D());
-    pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
-  }
-  for (let k = 0; k < LK; k++) if (paths[k]) { ctx.fillStyle = warmCols[k]; ctx.fill(paths[k]); }
-
+  paint();
   cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
   skip = lite ? cost > 5 : cost > 7;
   awake = !reduce && (moving || ringOn || (pointer && now - lastMove < 500)); // sleep once everything is home and nothing pushes
@@ -129,16 +194,23 @@ function loop(now) {
 }
 function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
 
-// only the pointer near the word counts; everywhere else in the hero the word does not even wake up
+// Only the pointer near the word counts; everywhere else in the hero the word does not even wake up.
+// The pointer is read once per frame (not on every event) so no layout is forced by a burst of events.
 const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
 const near = p => p[0] > -HW.radius && p[0] < W + HW.radius && p[1] > -HW.radius && p[1] < H + HW.radius;
 const away = () => { if (px > -1e4) { px = py = -1e5; wake(); } };
-hero.addEventListener('pointermove', e => {
-  if (e.pointerType === 'touch') return;
+let pendingMove = null, pumpRaf = 0;
+function applyPointer() {
+  pumpRaf = 0; const e = pendingMove; pendingMove = null;
+  if (!e) return;
   const p = local(e);
   if (near(p)) { px = p[0]; py = p[1]; lastMove = performance.now(); wake(); } else away();
+}
+hero.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  pendingMove = e; if (!pumpRaf) pumpRaf = requestAnimationFrame(applyPointer);
 });
-hero.addEventListener('pointerleave', away);
+hero.addEventListener('pointerleave', () => { pendingMove = null; away(); });
 hero.addEventListener('pointerdown', e => {
   if (reduce || e.target.closest('a,button')) return;
   const p = local(e);
@@ -183,6 +255,8 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   let wx = W_ORTHO / 4, wy = W_ORTHO / 4;
   const buckets = Array.from({ length: BUCKETS }, () => []);
   let warmLeft = 0, raf = 0, visible = true, lastW = 0, lastH = 0, timer = 0, tick = 0, cost = 0, skip = lite;
+  let lastT = 0, dAvg = 16, nFrames = 0, tier = 0, best = 1000, grace = 120; // frame governor
+  let inkCells = 0, deadFrames = 0, nextDrop = 0; // keeps the reaction alive: on a small grid it can die out
 
   function rng(seed) {
     let a = seed >>> 0;
@@ -205,6 +279,15 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
         const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols);
         V[i] = .5; U[i] = .25;
       }
+    }
+  }
+
+  function drop() {
+    const cx = Math.floor(Math.random() * cols), cy = Math.floor(Math.random() * rows);
+    for (let dy = -SEED_R; dy <= SEED_R; dy++) for (let dx = -SEED_R; dx <= SEED_R; dx++) {
+      if (dx * dx + dy * dy > SEED_R * SEED_R) continue;
+      const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols);
+      V[i] = .5; U[i] = .25;
     }
   }
 
@@ -253,6 +336,7 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
         buckets[Math.min(BUCKETS - 1, Math.floor(lum * BUCKETS))].push(i);
       }
     }
+    inkCells = 0; for (let b = 0; b < BUCKETS; b++) inkCells += buckets[b].length;
     // one alpha write per bucket; the strongest fronts are red, the rest grey
     for (let b = 0; b < BUCKETS; b++) {
       const list = buckets[b];
@@ -289,13 +373,31 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
     for (let x = 0; x < cols; x++) { lf[x] = (x - 1 + cols) % cols; rt[x] = (x + 1) % cols; }
     for (let y = 0; y < rows; y++) { up[y] = (y - 1 + rows) % rows; dn[y] = (y + 1) % rows; }
     sized = true; seed();
+    tier = Math.min(tier, 1); nFrames = 0; dAvg = 16; grace = 120;
     // warm-up, so the first paint is not a blank grid; spread over a few frames to avoid one long freeze
     if (reduce) { for (let s = 0; s < WARM + REDUCED_EXTRA; s++) step(); draw(); warmLeft = 0; } else warmLeft = WARM;
   }
 
   function loop(now) {
     raf = 0;
-    if (!visible || document.hidden) return;
+    if (!visible || document.hidden) { lastT = 0; return; }
+    // governor: average real frame time of the page; too slow for a while -> half rate, still too slow -> freeze this layer
+    // It starts judging only once the layer has settled (warm-up and font loading make a few long frames), compares with the
+    // best frame time this screen has shown (a 30 Hz or power-saving display is not "slow"), and never freezes on a blip.
+    if (lastT && warmLeft === 0) {
+      const dt = Math.min(now - lastT, 100);
+      if (grace > 0) grace--;
+      else {
+        if (dt >= 4 && dt < best) best = dt;
+        dAvg += (dt - dAvg) * .05;
+        const base = Math.max(16, best);
+        if (++nFrames > 90 && tier < 2 && dAvg > Math.max(tier ? 36 : 26, base * (tier ? 2.2 : 1.6))) {
+          tier++; nFrames = 0; dAvg = base;
+          if (tier === 2) return; // freeze: the last picture stays on screen, nothing is computed any more
+        }
+      }
+    }
+    lastT = now;
     if (skip && (++tick & 1)) { raf = requestAnimationFrame(loop); return; } // phones: 30 fps; slow PCs: halve the rate
     if (sized) {
       if (warmLeft > 0) {
@@ -308,11 +410,13 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
       for (let s = 0; s < SUB; s++) step();
       draw();
       cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
-      skip = lite || cost > 9;
+      skip = lite || tier > 0 || cost > 9;
+      if (inkCells < 8) { if (++deadFrames > 20) { drop(); drop(); deadFrames = 0; } } else deadFrames = 0; // died out: new drops
+      if (now > nextDrop) { nextDrop = now + 6000 + Math.random() * 5000; if (cols * rows < 6000) drop(); } // small grids: a heartbeat
     }
     raf = requestAnimationFrame(loop);
   }
-  const wake = () => { if (!raf && !reduce && visible && !document.hidden) raf = requestAnimationFrame(loop); };
+  const wake = () => { if (!raf && !reduce && visible && !document.hidden && tier < 2) raf = requestAnimationFrame(loop); };
 
   new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(area);
   document.addEventListener('visibilitychange', wake);
@@ -438,10 +542,11 @@ addEventListener('scroll', onScroll, { passive: true }); update();
 
 /* ---------- hero stage parallax ---------- */
 const fls = $$('.fl');
-if (!touch && !reduce && fls.length) addEventListener('pointermove', e => {
-  const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5;
-  fls.forEach(f => { const d = +f.dataset.depth; f.style.translate = `${nx * -d}px ${ny * -d}px`; });
-});
+if (!touch && !reduce && fls.length) {
+  let nx = 0, ny = 0, queued = 0;
+  const apply = () => { queued = 0; fls.forEach(f => { const d = +f.dataset.depth; f.style.translate = `${nx * -d}px ${ny * -d}px`; }); };
+  addEventListener('pointermove', e => { nx = e.clientX / innerWidth - .5; ny = e.clientY / innerHeight - .5; if (!queued) queued = requestAnimationFrame(apply); });
+}
 
 /* ---------- eye follows the cursor while its block is on screen ---------- */
 const iris = $('.iris'), eyeSvg = $('.eye-svg');
