@@ -12,12 +12,12 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
 const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero'), glow = $('#glow');
 const lite = touch || innerWidth < 900;
 const HW = {
-  word: 'продажи', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
-  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .1 : .26,
+  word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46,
   ink: [196, 196, 196], warm: [255, 31, 45], bg: '#050505'
 };
 let W = 0, H = 0, dpr = 1, dots = new Float32Array(0), count = 0;
-let px = -1e5, py = -1e5, ring = { x: 0, y: 0, t: -1 };
+let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
 let raf = 0, visible = true, awake = true, sx = innerWidth * .62, sy = innerHeight * .38;
 
 function layout() {
@@ -103,13 +103,13 @@ function draw(now) {
     } else { rest.moveTo(x + rad, y); rest.arc(x, y, rad, 0, 6.2832); }
   }
   ctx.fillStyle = `rgb(${ir},${ig},${ib})`; ctx.fill(rest);
-  awake = !reduce && (moving || age < 900 || px > -1e4); // sleep once everything is home and nothing pushes
+  awake = !reduce && (moving || age < 900 || (px > -1e4 && now - lastMove < 500)); // sleep once everything is home and nothing pushes
 }
 function loop(now) { raf = 0; if (!visible) return; draw(now); if (awake) raf = requestAnimationFrame(loop); }
 function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
 
 const local = e => { const b = hero.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
-hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; [px, py] = local(e); wake(); });
+hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; [px, py] = local(e); lastMove = performance.now(); wake(); });
 hero.addEventListener('pointerleave', () => { px = py = -1e5; wake(); });
 hero.addEventListener('pointerdown', e => {
   if (reduce || e.target.closest('a,button')) return;
@@ -144,7 +144,7 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   const RAMP = ' .:-=+*#%@', BUCKETS = 6;
   const DU = 1, DV = .5, FEED = .018, KILL = .051; // worm/front regime: sparse AND moving
   const SUB = lite ? 3 : 4, WARM = lite ? 420 : 520, REDUCED_EXTRA = 400;
-  const CELL = 14, FONT = '"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace';
+  const CELL = lite ? 18 : 16, FONT = '"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace';
   const SEEDS = 7, SEED_R = 4, GRAD_SCALE = .14, INK_FLOOR = .08;
   const W_DIAG = .05, W_ORTHO = .8;
   const INJ_TAU = .4, INJ_R = 3.5, INJ_V = .42, INJ_U = .2;
@@ -154,7 +154,7 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   let U, V, Un, Vn, lf, rt, up, dn, charBuf, gradBuf;
   let wx = W_ORTHO / 4, wy = W_ORTHO / 4;
   const buckets = Array.from({ length: BUCKETS }, () => []);
-  let warmLeft = 0, raf = 0, last = 0, visible = true, lastW = 0, lastH = 0, timer = 0;
+  let warmLeft = 0, raf = 0, last = 0, visible = true, lastW = 0, lastH = 0, timer = 0, tick = 0, cost = 0, skip = lite;
   const ptr = { gx: -1e5, gy: -1e5, has: false, strength: 0 };
 
   function rng(seed) {
@@ -281,7 +281,8 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   function loop(now) {
     raf = 0;
     if (!visible || document.hidden) return;
-    const dt = last ? Math.min(.05, (now - last) / 1000) : 1 / 60; last = now;
+    if (skip && (++tick & 1)) { raf = requestAnimationFrame(loop); return; } // phones: 30 fps; slow PCs: halve the rate
+    const dt = last ? Math.min(.1, (now - last) / 1000) : 1 / 60; last = now;
     if (sized) {
       if (warmLeft > 0) {
         const n = Math.min(warmLeft, 130);
@@ -291,8 +292,11 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
       }
       ptr.strength += ((ptr.has ? 1 : 0) - ptr.strength) * Math.min(1, dt / INJ_TAU);
       if (ptr.strength > .01 && ptr.gx > -1e4) inject(ptr.gx, ptr.gy, ptr.strength);
+      const t0 = performance.now();
       for (let s = 0; s < SUB; s++) step();
       draw();
+      cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
+      skip = lite || cost > 9;
     }
     raf = requestAnimationFrame(loop);
   }
@@ -322,23 +326,24 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   fonts.then(() => document.fonts.ready).then(start, start);
 })();
 
-/* ---------- cursor ---------- */
+/* ---------- cursor: a single ring that replaces the system arrow ---------- */
 const cur = $('#cursor');
 if (!touch) {
-  let cx = 0, cy = 0;
-  const dot = $('#cursorDot'), root = document.documentElement;
-  // the system arrow is hidden only once the custom cursor is actually running (mouse/pen, never touch)
+  let cx = 0, cy = 0, raf2 = 0;
+  const root = document.documentElement;
+  const follow = () => {
+    cx += (mouse.x - cx) * .32; cy += (mouse.y - cy) * .32;
+    cur.style.transform = `translate(${cx.toFixed(1)}px,${cy.toFixed(1)}px)`;
+    raf2 = Math.abs(mouse.x - cx) + Math.abs(mouse.y - cy) > .3 ? requestAnimationFrame(follow) : 0; // idle = no loop
+  };
+  // the system arrow is hidden only once the ring is actually running (mouse/pen, never touch)
   addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;
-    root.classList.add('cursor-on'); cur.classList.add('on'); dot.classList.add('on');
-    dot.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    if (!root.classList.contains('cursor-on')) { cx = e.clientX; cy = e.clientY; }
+    root.classList.add('cursor-on'); cur.classList.add('on');
+    if (!raf2) raf2 = requestAnimationFrame(follow);
   });
-  root.addEventListener('mouseleave', () => { cur.classList.remove('on'); dot.classList.remove('on'); });
-  (function loop() {
-    cx += (mouse.x - cx) * .2; cy += (mouse.y - cy) * .2;
-    cur.style.transform = `translate(${cx}px,${cy}px)`;
-    requestAnimationFrame(loop);
-  })();
+  root.addEventListener('mouseleave', () => cur.classList.remove('on'));
   $$('a,summary').forEach(el => {
     el.addEventListener('pointerenter', () => cur.classList.add('big'));
     el.addEventListener('pointerleave', () => cur.classList.remove('big'));
@@ -405,8 +410,9 @@ const words = $$('.wd', scrub);
 /* ---------- scroll effects ---------- */
 const bar = $('#progress'), nav = $('#nav'), giant = $('#giant'), sticky = $('#sticky'), services = $('#services');
 const contactsEl = document.getElementById('contacts');
-let lastY = scrollY;
-function onScroll() {
+let lastY = scrollY, ticking = false, litN = -1;
+function update() {
+  ticking = false;
   const max = document.documentElement.scrollHeight - innerHeight;
   bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
   nav.classList.toggle('hide', scrollY > lastY && scrollY > 200);
@@ -414,14 +420,17 @@ function onScroll() {
   lastY = scrollY;
 
   const r = scrub.getBoundingClientRect();
-  const p = Math.min(1, Math.max(0, (innerHeight * .85 - r.top) / (r.height + innerHeight * .35)));
-  const n = Math.round(p * words.length);
-  words.forEach((w, i) => w.classList.toggle('lit', i < n));
+  if (r.bottom > -200 && r.top < innerHeight + 200) {
+    const p = Math.min(1, Math.max(0, (innerHeight * .85 - r.top) / (r.height + innerHeight * .35)));
+    const n = Math.round(p * words.length);
+    if (n !== litN) { words.forEach((w, i) => w.classList.toggle('lit', i < n)); litN = n; }
+  }
 
   const sr = services.getBoundingClientRect();
-  if (!reduce) giant.style.transform = `translateX(${-sr.top * .45}px)`;
+  if (!reduce && sr.bottom > -300 && sr.top < innerHeight + 300) giant.style.transform = `translateX(${-sr.top * .45}px)`;
 }
-addEventListener('scroll', onScroll, { passive: true }); onScroll();
+function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+addEventListener('scroll', onScroll, { passive: true }); update();
 
 /* ---------- hero stage parallax ---------- */
 const fls = $$('.fl');
@@ -446,3 +455,7 @@ if (iris && eyeSvg && !reduce) {
     iris.style.transform = `translate(${ix.toFixed(2)}px,${iy.toFixed(2)}px)`;
   })();
 }
+
+/* ---------- pause the CSS animations of everything that is off screen ---------- */
+const offObs = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('off', !e.isIntersecting)), { rootMargin: '120px' });
+$$('section, .marquee').forEach(el => offObs.observe(el));

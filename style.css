@@ -74,9 +74,9 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 .grain{position:fixed;inset:-50%;pointer-events:none;z-index:90;opacity:.09;mix-blend-mode:overlay;animation:grain 1s steps(6) infinite;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
-.cursor{position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border:1.5px solid var(--red);border-radius:50%;pointer-events:none;z-index:120;transition:width .25s,height .25s,margin .25s,background .25s;opacity:0}
+.cursor{position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border:1.5px solid var(--red);box-shadow:0 0 0 1.5px rgba(255,255,255,.38);border-radius:50%;pointer-events:none;z-index:120;transition:width .25s,height .25s,margin .25s,background .25s;opacity:0}
 .cursor.on{opacity:1}
-.cursor.big{width:76px;height:76px;margin:-38px 0 0 -38px;background:rgba(255,31,45,.2);backdrop-filter:blur(2px)}
+.cursor.big{width:76px;height:76px;margin:-38px 0 0 -38px;background:rgba(255,31,45,.2)}
 @media (hover:none){.cursor{display:none}}
 
 /* nav */
@@ -536,10 +536,7 @@ a,button,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulati
 @media (max-width:900px){.pf{padding:1.4rem;gap:1rem}.pf-ico{width:52px;height:52px;font-size:1.5rem}}
 
 /* custom cursor: hide the system arrow once the custom one is running; dot = exact pointer position */
-.cursor-dot{position:fixed;left:0;top:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.65),0 0 14px rgba(255,31,45,.9);pointer-events:none;z-index:121;opacity:0;transition:opacity .2s}
-.cursor-dot.on{opacity:1}
 html.cursor-on,html.cursor-on *{cursor:none!important}
-@media (hover:none){.cursor-dot{display:none}}
 
 /* fallback contact when Kwork is unreachable */
 .fallback{color:#fff;font-weight:600;text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:3px;transition:color .2s}
@@ -550,7 +547,7 @@ html.cursor-on,html.cursor-on *{cursor:none!important}
 
 /* desktop: keep the hero + the halftone word inside the first screen */
 @media (min-width:1100px){
-  .hero{padding:92px var(--pad) calc(var(--word-h,0px) + 24px)}
+  .hero{padding:84px var(--pad) calc(var(--word-h,0px) + 12px)}
   .trust{margin-top:2rem}
 }
 
@@ -559,3 +556,34 @@ html.cursor-on,html.cursor-on *{cursor:none!important}
 
 /* the tilted marquee is intentionally wider than the screen: never allow horizontal scroll */
 html{overflow-x:clip}
+
+/* ===== text-zone scrim: the background layers are dimmed behind the hero copy ===== */
+.hero-inner::before{content:"";position:absolute;inset:-70px -90px -50px -70px;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse 75% 70% at 38% 52%,rgba(5,5,5,.9),rgba(5,5,5,.74) 50%,rgba(5,5,5,0) 100%)}
+
+/* ===== performance: cheaper compositing, no animated full-screen layers ===== */
+.grain{animation:none;mix-blend-mode:normal;opacity:.04;inset:0}
+.ambient b{filter:none;animation:none;will-change:auto}
+.ambient b:nth-child(1){background:radial-gradient(circle,rgba(255,31,45,.30),transparent 68%)}
+.ambient b:nth-child(2){background:radial-gradient(circle,rgba(179,0,15,.36),transparent 68%)}
+.ambient b:nth-child(3){background:radial-gradient(circle,rgba(255,255,255,.06),transparent 68%)}
+.glow{mix-blend-mode:normal}
+.js .reveal:not(.in){filter:none}
+/* glass: smaller blur radius; none on tiny or constantly-repainting elements (they sit over canvases) */
+.card,.plan,.chan,.cta:not(.main),.timer,.ask,.me,.pf{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}
+.badge,.chips2 span,.btn.ghost,.fl{-webkit-backdrop-filter:none;backdrop-filter:none}
+.fl{background:linear-gradient(150deg,rgba(40,40,44,.84),rgba(14,14,16,.84))}
+.nav{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+/* equalizer: animate transform instead of height (no layout every frame) */
+.eq u{height:70px;transform-origin:50% 100%}
+@keyframes eq{from{transform:scaleY(.17)}to{transform:scaleY(1)}}
+/* everything that is off screen stops animating (set by IntersectionObserver in script.js) */
+.off,.off *,.off *::before,.off *::after{animation-play-state:paused!important}
+
+@media (max-width:900px){
+  .card,.plan,.chan,.cta:not(.main),.timer,.ask,.me,.pf,.nav{-webkit-backdrop-filter:none;backdrop-filter:none}
+  .card,.plan,.chan,.cta:not(.main),.timer,.ask,.me,.pf{background:linear-gradient(150deg,rgba(38,38,42,.92),rgba(16,16,18,.94))}
+  .chan{background:linear-gradient(110deg,rgba(64,14,20,.92),rgba(16,16,18,.94))}
+  .nav{background:rgba(8,8,8,.92)}
+  .ambient,.grain{display:none}
+}
