@@ -5,17 +5,20 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const mouse = { x: innerWidth * .6, y: innerHeight * .45, moved: false };
 addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true; });
 
-/* ---------- hero: halftone wordmark (static) ---------- */
+/* ---------- hero: halftone wordmark ---------- */
 // A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
-// letter covers its cell (area-true), so the type keeps its edges at any scale. It is painted once (and again when the
-// hero changes size): no per-frame work and no reaction to the pointer.
+// letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
+// springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
 const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
   word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
-  gap: lite ? 3 : 6, crop: lite ? .12 : .46, ink: 'rgb(196,196,196)'
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46,
+  ink: [196, 196, 196], warm: [255, 31, 45], bg: '#050505'
 };
-let W = 0, H = 0;
+let W = 0, H = 0, dpr = 1, dots = new Float32Array(0), count = 0;
+let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
+let raf = 0, visible = true, awake = true;
 
 function layout() {
   const m = document.createElement('canvas').getContext('2d');
@@ -30,7 +33,7 @@ function layout() {
   // the hero grows to leave room for the visible part of the word under the text
   hero.style.setProperty('--word-h', Math.round(cap * (1 - HW.crop)) + 'px');
   H = Math.max(1, Math.round(hero.getBoundingClientRect().height));
-  const dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
+  dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
 
   const mask = document.createElement('canvas'); mask.width = W; mask.height = H;
@@ -39,25 +42,75 @@ function layout() {
   mc.fillText(HW.word, (W - box.width) / 2, H + cap * HW.crop);
   const img = mc.getImageData(0, 0, W, H).data;
 
-  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), dots = new Path2D();
+  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       let sum = 0; // coverage: average alpha over a 3x3 sample of the cell
-      for (let sy = 0; sy < 3; sy++) for (let sx = 0; sx < 3; sx++) {
-        const x = Math.min(W - 1, Math.floor(gx * gap + (sx + .5) * gap / 3));
-        const y = Math.min(H - 1, Math.floor(gy * gap + (sy + .5) * gap / 3));
+      for (let sy2 = 0; sy2 < 3; sy2++) for (let sx2 = 0; sx2 < 3; sx2++) {
+        const x = Math.min(W - 1, Math.floor(gx * gap + (sx2 + .5) * gap / 3));
+        const y = Math.min(H - 1, Math.floor(gy * gap + (sy2 + .5) * gap / 3));
         sum += img[(y * W + x) * 4 + 3];
       }
       const cov = sum / (9 * 255);
       if (cov < .06) continue;
-      const hx = gx * gap + gap / 2, hy = gy * gap + gap / 2, r = Math.sqrt(cov) * gap * .56;
-      dots.moveTo(hx + r, hy); dots.arc(hx, hy, r, 0, 6.2832);
+      const hx = gx * gap + gap / 2, hy = gy * gap + gap / 2;
+      tmp.push(hx, hy, 0, 0, hx, hy, Math.sqrt(cov) * gap * .56); // x y vx vy homeX homeY radius
     }
   }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = HW.ink; ctx.fill(dots);
+  dots = new Float32Array(tmp); count = tmp.length / 7;
+  awake = true;
 }
+
+function draw(now) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H); // transparent: the ASCII layer shows through behind the word
+
+  const r = reduce ? 0 : HW.radius;
+  const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9;
+  const [ir, ig, ib] = HW.ink, [wr, wg, wb] = HW.warm;
+  const rest = new Path2D();
+  let moving = false;
+  for (let i = 0; i < count; i++) {
+    const j = i * 7;
+    let x = dots[j], y = dots[j + 1], vx = dots[j + 2], vy = dots[j + 3];
+    const hx = dots[j + 4], hy = dots[j + 5], rad = dots[j + 6];
+    if (!reduce) {
+      if (age < 900) { // shock ring from a click
+        const dx = hx - ring.x, dy = hy - ring.y, d = Math.sqrt(dx * dx + dy * dy) + .001;
+        const band = 1 - Math.min(1, Math.abs(d - ringR) / 26);
+        if (band > 0) { const f = band * 3.2 * (1 - age / 900); vx += dx / d * f; vy += dy / d * f; }
+      }
+      const ddx = x - px, ddy = y - py, d2 = ddx * ddx + ddy * ddy;
+      if (r > 0 && d2 < r * r) { // push away from the pointer
+        const d = Math.sqrt(d2) + .001, f = (1 - d / r) * 2.6;
+        vx += ddx / d * f; vy += ddy / d * f;
+      }
+      vx = (vx + (hx - x) * .05) * .84; vy = (vy + (hy - y) * .05) * .84; // spring back home
+      x += vx; y += vy;
+      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) moving = true;
+      else { x = hx; y = hy; vx = 0; vy = 0; }
+      dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
+    }
+    const k = Math.min(1, Math.hypot(x - hx, y - hy) / 28); // warmth: 0 at home, 1 when far
+    if (k > .02) {
+      ctx.fillStyle = `rgb(${Math.round(ir + (wr - ir) * k)},${Math.round(ig + (wg - ig) * k)},${Math.round(ib + (wb - ib) * k)})`;
+      ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
+    } else { rest.moveTo(x + rad, y); rest.arc(x, y, rad, 0, 6.2832); }
+  }
+  ctx.fillStyle = `rgb(${ir},${ig},${ib})`; ctx.fill(rest);
+  awake = !reduce && (moving || age < 900 || (px > -1e4 && now - lastMove < 500)); // sleep once everything is home and nothing pushes
+}
+function loop(now) { raf = 0; if (!visible) return; draw(now); if (awake) raf = requestAnimationFrame(loop); }
+function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
+
+const local = e => { const b = hero.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; [px, py] = local(e); lastMove = performance.now(); wake(); });
+hero.addEventListener('pointerleave', () => { px = py = -1e5; wake(); });
+hero.addEventListener('pointerdown', e => {
+  if (reduce || e.target.closest('a,button')) return;
+  const p = local(e); ring = { x: p[0], y: p[1], t: performance.now() }; wake();
+});
+new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(hero);
 
 // re-lay out only when the hero's size really changes (fonts landing, text reflow, window resize)
 let pending = 0;
@@ -66,13 +119,13 @@ new ResizeObserver(() => {
   pending = requestAnimationFrame(() => {
     pending = 0;
     const b = hero.getBoundingClientRect();
-    if (Math.round(b.width) !== W || Math.round(b.height) !== H) layout();
+    if (Math.round(b.width) !== W || Math.round(b.height) !== H) { layout(); wake(); }
   });
 }).observe(hero);
 
-layout();
+layout(); draw(performance.now()); wake();
 // the word is set in the real face once it has loaded
-if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(layout);
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); wake(); });
 
 /* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
 // The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
