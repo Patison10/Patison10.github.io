@@ -643,3 +643,6 @@ html{overflow-x:clip}
 
 /* the red light behind the hero copy is fixed: the background no longer follows the pointer */
 .glow{left:62%;top:38%;will-change:auto}
+
+/* the halftone canvas covers only the band under the word (its height is set by script.js), not the whole hero */
+#grid{inset:auto 0 0 0;width:100%;height:auto}

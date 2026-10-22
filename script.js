@@ -9,16 +9,21 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
 // A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
 // letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
 // springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
+// Kept cheap on purpose: the canvas covers only the band under the word (not the whole hero), only the columns where
+// dots are away from home are repainted (clipped, one path per warmth level), and nothing runs unless the pointer is
+// near the word or dots are still moving.
 const cv = $('#grid'), ctx = cv.getContext('2d'), hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
   word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
-  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46,
-  ink: [196, 196, 196], warm: [255, 31, 45], bg: '#050505'
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .46, margin: lite ? 40 : 70,
+  ink: [196, 196, 196], warm: [255, 31, 45]
 };
-let W = 0, H = 0, dpr = 1, dots = new Float32Array(0), count = 0;
+const LK = 9; // warmth levels
+let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, gap = 0, warmCols = [], dots = new Float32Array(0), count = 0;
+let colStart = new Int32Array(0), colList = new Int32Array(0), prevX0 = 1e9, prevX1 = -1e9, full = true;
 let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
-let raf = 0, visible = true, awake = true;
+let raf = 0, visible = true, awake = true, cost = 0, skip = false, tick = 0;
 
 function layout() {
   const m = document.createElement('canvas').getContext('2d');
@@ -30,9 +35,12 @@ function layout() {
   const box = m.measureText(HW.word);
   const cap = box.actualBoundingBoxAscent || size * .72;
 
-  // the hero grows to leave room for the visible part of the word under the text
-  hero.style.setProperty('--word-h', Math.round(cap * (1 - HW.crop)) + 'px');
-  H = Math.max(1, Math.round(hero.getBoundingClientRect().height));
+  // the hero grows to leave room for the visible part of the word under the text; the canvas is only that band + a margin
+  const wordH = Math.round(cap * (1 - HW.crop));
+  hero.style.setProperty('--word-h', wordH + 'px');
+  heroH = Math.round(hero.getBoundingClientRect().height);
+  H = wordH + HW.margin;
+  cv.style.height = H + 'px';
   dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
 
@@ -42,75 +50,124 @@ function layout() {
   mc.fillText(HW.word, (W - box.width) / 2, H + cap * HW.crop);
   const img = mc.getImageData(0, 0, W, H).data;
 
-  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
+  gap = HW.gap; const cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
+  rmax = gap * .56;
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       let sum = 0; // coverage: average alpha over a 3x3 sample of the cell
-      for (let sy2 = 0; sy2 < 3; sy2++) for (let sx2 = 0; sx2 < 3; sx2++) {
-        const x = Math.min(W - 1, Math.floor(gx * gap + (sx2 + .5) * gap / 3));
-        const y = Math.min(H - 1, Math.floor(gy * gap + (sy2 + .5) * gap / 3));
+      for (let sy = 0; sy < 3; sy++) for (let sx = 0; sx < 3; sx++) {
+        const x = Math.min(W - 1, Math.floor(gx * gap + (sx + .5) * gap / 3));
+        const y = Math.min(H - 1, Math.floor(gy * gap + (sy + .5) * gap / 3));
         sum += img[(y * W + x) * 4 + 3];
       }
       const cov = sum / (9 * 255);
       if (cov < .06) continue;
       const hx = gx * gap + gap / 2, hy = gy * gap + gap / 2;
-      tmp.push(hx, hy, 0, 0, hx, hy, Math.sqrt(cov) * gap * .56); // x y vx vy homeX homeY radius
+      tmp.push(hx, hy, 0, 0, hx, hy, Math.sqrt(cov) * rmax); // x y vx vy homeX homeY radius
     }
   }
   dots = new Float32Array(tmp); count = tmp.length / 7;
+  // dots grouped by grid column: lets a repaint touch only the columns it needs
+  colStart = new Int32Array(cols + 2); colList = new Int32Array(count);
+  for (let i = 0; i < count; i++) colStart[Math.floor(dots[i * 7 + 4] / gap) + 1]++;
+  for (let c = 0; c <= cols; c++) colStart[c + 1] += colStart[c];
+  const fill = colStart.slice();
+  for (let i = 0; i < count; i++) colList[fill[Math.floor(dots[i * 7 + 4] / gap)]++] = i;
+  prevX0 = 1e9; prevX1 = -1e9; full = true;
+
+  // one colour per warmth level (ink -> red); dots of the same level are filled together in a single path
+  warmCols = Array.from({ length: LK }, (_, k) => {
+    const t = k / (LK - 1);
+    return `rgb(${HW.ink.map((v, i) => Math.round(v + (HW.warm[i] - v) * t)).join(',')})`;
+  });
   awake = true;
 }
 
 function draw(now) {
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H); // transparent: the ASCII layer shows through behind the word
-
-  const r = reduce ? 0 : HW.radius;
-  const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9;
-  const [ir, ig, ib] = HW.ink, [wr, wg, wb] = HW.warm;
-  const rest = new Path2D();
-  let moving = false;
-  for (let i = 0; i < count; i++) {
-    const j = i * 7;
-    let x = dots[j], y = dots[j + 1], vx = dots[j + 2], vy = dots[j + 3];
-    const hx = dots[j + 4], hy = dots[j + 5], rad = dots[j + 6];
-    if (!reduce) {
-      if (age < 900) { // shock ring from a click
+  const t0 = performance.now();
+  const r = reduce ? 0 : HW.radius, r2 = r * r;
+  const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9, ringOn = age < 900;
+  const pointer = px > -1e4;
+  let moving = false, x0 = 1e9, x1 = -1e9; // x0..x1: where dots are currently away from home
+  if (!reduce) {
+    for (let i = 0; i < count; i++) {
+      const j = i * 7;
+      let x = dots[j], y = dots[j + 1], vx = dots[j + 2], vy = dots[j + 3];
+      const hx = dots[j + 4], hy = dots[j + 5];
+      const ddx = x - px, ddy = y - py, d2 = ddx * ddx + ddy * ddy;
+      const resting = vx === 0 && vy === 0 && x === hx && y === hy;
+      // a resting dot far from the pointer and from a shock ring needs no work at all
+      if (resting && !ringOn && !(pointer && d2 < r2)) continue;
+      if (ringOn) { // shock ring from a click
         const dx = hx - ring.x, dy = hy - ring.y, d = Math.sqrt(dx * dx + dy * dy) + .001;
         const band = 1 - Math.min(1, Math.abs(d - ringR) / 26);
         if (band > 0) { const f = band * 3.2 * (1 - age / 900); vx += dx / d * f; vy += dy / d * f; }
       }
-      const ddx = x - px, ddy = y - py, d2 = ddx * ddx + ddy * ddy;
-      if (r > 0 && d2 < r * r) { // push away from the pointer
+      if (pointer && d2 < r2) { // push away from the pointer
         const d = Math.sqrt(d2) + .001, f = (1 - d / r) * 2.6;
         vx += ddx / d * f; vy += ddy / d * f;
       }
       vx = (vx + (hx - x) * .05) * .84; vy = (vy + (hy - y) * .05) * .84; // spring back home
       x += vx; y += vy;
-      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) moving = true;
-      else { x = hx; y = hy; vx = 0; vy = 0; }
+      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) {
+        moving = true;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (hx < x0) x0 = hx; if (hx > x1) x1 = hx;
+      } else { x = hx; y = hy; vx = 0; vy = 0; }
       dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
     }
-    const k = Math.min(1, Math.hypot(x - hx, y - hy) / 28); // warmth: 0 at home, 1 when far
-    if (k > .02) {
-      ctx.fillStyle = `rgb(${Math.round(ir + (wr - ir) * k)},${Math.round(ig + (wg - ig) * k)},${Math.round(ib + (wb - ib) * k)})`;
-      ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
-    } else { rest.moveTo(x + rad, y); rest.arc(x, y, rad, 0, 6.2832); }
   }
-  ctx.fillStyle = `rgb(${ir},${ig},${ib})`; ctx.fill(rest);
-  awake = !reduce && (moving || age < 900 || (px > -1e4 && now - lastMove < 500)); // sleep once everything is home and nothing pushes
+
+  // repaint only the columns where something is (or just was) away from home
+  let a, b;
+  if (full || reduce) { a = 0; b = W; }
+  else {
+    a = Math.min(x0, prevX0); b = Math.max(x1, prevX1);
+    if (a > b) { awake = !reduce && (ringOn || (pointer && now - lastMove < 500)); return; } // nothing moved, nothing to repaint
+    a = Math.max(0, a - rmax - 2); b = Math.min(W, b + rmax + 2);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.save(); ctx.beginPath(); ctx.rect(a, 0, b - a, H); ctx.clip(); // clip = repainted dots never pile up on the edge
+  ctx.clearRect(a, 0, b - a, H);
+  const cols = colStart.length - 2, c0 = Math.max(0, Math.floor(a / gap) - 1), c1 = Math.min(cols - 1, Math.floor(b / gap) + 1);
+  const paths = [];
+  for (let c = c0; c <= c1; c++) {
+    for (let q = colStart[c]; q < colStart[c + 1]; q++) {
+      const j = colList[q] * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
+      const k = Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))); // warmth: 0 at home
+      const pth = paths[k] || (paths[k] = new Path2D());
+      pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
+    }
+  }
+  for (let k = 0; k < LK; k++) if (paths[k]) { ctx.fillStyle = warmCols[k]; ctx.fill(paths[k]); }
+  ctx.restore();
+  prevX0 = x0; prevX1 = x1; full = false;
+  cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
+  skip = lite ? cost > 5 : cost > 7;
+  awake = !reduce && (moving || ringOn || (pointer && now - lastMove < 500)); // sleep once everything is home and nothing pushes
 }
-function loop(now) { raf = 0; if (!visible) return; draw(now); if (awake) raf = requestAnimationFrame(loop); }
+function loop(now) {
+  raf = 0; if (!visible) return;
+  if (skip && (++tick & 1)) { raf = requestAnimationFrame(loop); return; } // slow machine: halve the rate
+  draw(now); if (awake) raf = requestAnimationFrame(loop);
+}
 function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
 
-const local = e => { const b = hero.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
-hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; [px, py] = local(e); lastMove = performance.now(); wake(); });
-hero.addEventListener('pointerleave', () => { px = py = -1e5; wake(); });
+// only the pointer near the word counts; everywhere else in the hero the word does not even wake up
+const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+const near = p => p[0] > -HW.radius && p[0] < W + HW.radius && p[1] > -HW.radius && p[1] < H + HW.radius;
+const away = () => { if (px > -1e4) { px = py = -1e5; wake(); } };
+hero.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  const p = local(e);
+  if (near(p)) { px = p[0]; py = p[1]; lastMove = performance.now(); wake(); } else away();
+});
+hero.addEventListener('pointerleave', away);
 hero.addEventListener('pointerdown', e => {
   if (reduce || e.target.closest('a,button')) return;
-  const p = local(e); ring = { x: p[0], y: p[1], t: performance.now() }; wake();
+  const p = local(e);
+  if (near(p)) { ring = { x: p[0], y: p[1], t: performance.now() }; wake(); }
 });
-new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(hero);
+new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible && awake) wake(); }).observe(hero);
 
 // re-lay out only when the hero's size really changes (fonts landing, text reflow, window resize)
 let pending = 0;
@@ -119,13 +176,13 @@ new ResizeObserver(() => {
   pending = requestAnimationFrame(() => {
     pending = 0;
     const b = hero.getBoundingClientRect();
-    if (Math.round(b.width) !== W || Math.round(b.height) !== H) { layout(); wake(); }
+    if (Math.round(b.width) !== W || Math.round(b.height) !== heroH) { layout(); draw(performance.now()); }
   });
 }).observe(hero);
 
-layout(); draw(performance.now()); wake();
+layout(); draw(performance.now());
 // the word is set in the real face once it has loaded
-if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); wake(); });
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); draw(performance.now()); });
 
 /* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
 // The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
