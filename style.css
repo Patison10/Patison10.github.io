@@ -540,3 +540,7 @@ a,button,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulati
 .cursor-dot.on{opacity:1}
 html.cursor-on,html.cursor-on *{cursor:none!important}
 @media (hover:none){.cursor-dot{display:none}}
+
+/* fallback contact when Kwork is unreachable */
+.fallback{color:#fff;font-weight:600;text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:3px;transition:color .2s}
+.fallback:hover{color:var(--red)}
