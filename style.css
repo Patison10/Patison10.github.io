@@ -553,3 +553,9 @@ html.cursor-on,html.cursor-on *{cursor:none!important}
   .hero{padding:92px var(--pad) calc(var(--word-h,0px) + 24px)}
   .trust{margin-top:2rem}
 }
+
+/* hero layers: ASCII reaction front (bottom) -> halftone word -> red glow -> text */
+#ascii{position:absolute;inset:0;width:100%;height:100%;opacity:.5;pointer-events:none}
+
+/* the tilted marquee is intentionally wider than the screen: never allow horizontal scroll */
+html{overflow-x:clip}

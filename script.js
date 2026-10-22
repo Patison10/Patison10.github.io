@@ -63,7 +63,7 @@ function layout() {
 
 function draw(now) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = HW.bg; ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H); // transparent: the ASCII layer shows through behind the word
 
   // soft red light that follows the pointer
   const tx = px > -1e4 ? px : W * .62, ty = py > -1e4 ? py : H * .38;
@@ -131,6 +131,196 @@ new ResizeObserver(() => {
 layout(); draw(performance.now()); wake();
 // the word is set in the real face once it has loaded
 if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); wake(); });
+
+/* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
+// The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
+// concentration; each cell is inked by the gradient of V and only the RIDGE of that gradient survives (non-maximum
+// suppression), so every reaction front collapses to a thin crawling line instead of a wash. The pointer is a pipette:
+// it raises V and eats U in a small gaussian, which nucleates a new front under the cursor.
+(() => {
+  const canvas = $('#ascii');
+  if (!canvas) return;
+  const area = $('#hero'), g = canvas.getContext('2d');
+  const RAMP = ' .:-=+*#%@', BUCKETS = 6;
+  const DU = 1, DV = .5, FEED = .018, KILL = .051; // worm/front regime: sparse AND moving
+  const SUB = lite ? 3 : 4, WARM = lite ? 420 : 520, REDUCED_EXTRA = 400;
+  const CELL = 14, FONT = '"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace';
+  const SEEDS = 7, SEED_R = 4, GRAD_SCALE = .14, INK_FLOOR = .08;
+  const W_DIAG = .05, W_ORTHO = .8;
+  const INJ_TAU = .4, INJ_R = 3.5, INJ_V = .42, INJ_U = .2;
+  const GRAY = '#cfcfcf', RED = '#ff1f2d';
+
+  let cellW = CELL, cellH = CELL, cols = 0, rows = 0, dpr = 1, sized = false;
+  let U, V, Un, Vn, lf, rt, up, dn, charBuf, gradBuf;
+  let wx = W_ORTHO / 4, wy = W_ORTHO / 4;
+  const buckets = Array.from({ length: BUCKETS }, () => []);
+  let warmLeft = 0, raf = 0, last = 0, visible = true, lastW = 0, lastH = 0, timer = 0;
+  const ptr = { gx: -1e5, gy: -1e5, has: false, strength: 0 };
+
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const wrap = (v, n) => ((v % n) + n) % n;
+
+  function seed() {
+    U.fill(1); V.fill(0);
+    const rnd = rng(0x5eed1);
+    for (let s = 0; s < SEEDS; s++) {
+      const cx = Math.floor(rnd() * cols), cy = Math.floor(rnd() * rows);
+      for (let dy = -SEED_R; dy <= SEED_R; dy++) for (let dx = -SEED_R; dx <= SEED_R; dx++) {
+        if (dx * dx + dy * dy > SEED_R * SEED_R) continue;
+        const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols);
+        V[i] = .5; U[i] = .25;
+      }
+    }
+  }
+
+  // one Gray-Scott substep with a 9-point laplacian and toroidal wrap
+  function step() {
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const xm = lf[x], xp = rt[x], i = yc + x, u = U[i], v = V[i];
+        const lapU = -u + wx * (U[yc + xm] + U[yc + xp]) + wy * (U[ym + x] + U[yp + x]) + W_DIAG * (U[ym + xm] + U[ym + xp] + U[yp + xm] + U[yp + xp]);
+        const lapV = -v + wx * (V[yc + xm] + V[yc + xp]) + wy * (V[ym + x] + V[yp + x]) + W_DIAG * (V[ym + xm] + V[ym + xp] + V[yp + xm] + V[yp + xp]);
+        const uvv = u * v * v;
+        Un[i] = u + (DU * lapU - uvv + FEED * (1 - u));
+        Vn[i] = v + (DV * lapV + uvv - (FEED + KILL) * v);
+      }
+    }
+    let t = U; U = Un; Un = t; t = V; V = Vn; Vn = t;
+  }
+
+  function inject(gx, gy, strength) {
+    if (strength < .01) return;
+    const r = Math.ceil(INJ_R), cx = Math.round(gx), cy = Math.round(gy);
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 > INJ_R * INJ_R) continue;
+      const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols), k = Math.exp(-d2 / 6);
+      V[i] = Math.min(1, V[i] + INJ_V * strength * k);
+      U[i] = Math.max(0, U[i] - INJ_U * strength * k);
+    }
+  }
+
+  function draw() {
+    if (!sized) return;
+    g.clearRect(0, 0, cols * cellW, rows * cellH);
+    for (let b = 0; b < BUCKETS; b++) buckets[b].length = 0;
+    // gradient magnitude of V over the whole grid
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const gx = (V[yc + rt[x]] - V[yc + lf[x]]) * .5, gy = (V[yp + x] - V[ym + x]) * .5;
+        gradBuf[yc + x] = Math.abs(gx) + Math.abs(gy);
+      }
+    }
+    // keep only the ridge (local maximum along EITHER axis), ramp-index it, bucket it by luminance
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const i = yc + x, gr = gradBuf[i];
+        charBuf[i] = 0;
+        const onRidge = (gr >= gradBuf[yc + rt[x]] && gr >= gradBuf[yc + lf[x]]) || (gr >= gradBuf[yp + x] && gr >= gradBuf[ym + x]);
+        if (!onRidge) continue;
+        let lum = gr / GRAD_SCALE;
+        lum = lum < 0 ? 0 : lum > 1 ? 1 : lum;
+        if (lum < INK_FLOOR) continue;
+        const ci = Math.floor(lum * (RAMP.length - 1));
+        charBuf[i] = ci;
+        if (ci === 0) continue;
+        buckets[Math.min(BUCKETS - 1, Math.floor(lum * BUCKETS))].push(i);
+      }
+    }
+    // one alpha write per bucket; the strongest fronts are red, the rest grey
+    for (let b = 0; b < BUCKETS; b++) {
+      const list = buckets[b];
+      if (!list.length) continue;
+      g.globalAlpha = .1 + b / (BUCKETS - 1) * .9;
+      g.fillStyle = b >= BUCKETS - 2 ? RED : GRAY;
+      for (let k = 0; k < list.length; k++) {
+        const idx = list[k], x = idx % cols, y = (idx - x) / cols;
+        g.fillText(RAMP[charBuf[idx]], x * cellW + cellW / 2, y * cellH + cellH / 2);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  function resize() {
+    const b = area.getBoundingClientRect(), width = b.width, height = b.height;
+    if (width < 2 || height < 2) { sized = false; return; }
+    lastW = Math.round(width); lastH = Math.round(height);
+    dpr = Math.min(devicePixelRatio || 1, 1.5);
+    canvas.width = Math.max(1, Math.round(width * dpr)); canvas.height = Math.max(1, Math.round(height * dpr));
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const m = document.createElement('canvas').getContext('2d');
+    m.font = `${CELL}px ${FONT}`;
+    cellW = Math.max(4, m.measureText('MMMMMMMMMM').width / 10); cellH = CELL;
+    g.font = `${CELL}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    cols = Math.max(8, Math.ceil(width / cellW)); rows = Math.max(8, Math.ceil(height / cellH));
+    // split the orthogonal laplacian budget by 1/dx^2 : 1/dy^2 so the field is isotropic ON SCREEN despite the tall cell
+    const a2 = (cellH / cellW) * (cellH / cellW);
+    wx = W_ORTHO / 2 * (a2 / (1 + a2)); wy = W_ORTHO / 2 * (1 / (1 + a2));
+    const n = cols * rows;
+    U = new Float32Array(n); V = new Float32Array(n); Un = new Float32Array(n); Vn = new Float32Array(n);
+    charBuf = new Uint8Array(n); gradBuf = new Float32Array(n);
+    lf = new Int32Array(cols); rt = new Int32Array(cols); up = new Int32Array(rows); dn = new Int32Array(rows);
+    for (let x = 0; x < cols; x++) { lf[x] = (x - 1 + cols) % cols; rt[x] = (x + 1) % cols; }
+    for (let y = 0; y < rows; y++) { up[y] = (y - 1 + rows) % rows; dn[y] = (y + 1) % rows; }
+    sized = true; seed();
+    // warm-up, so the first paint is not a blank grid; spread over a few frames to avoid one long freeze
+    if (reduce) { for (let s = 0; s < WARM + REDUCED_EXTRA; s++) step(); draw(); warmLeft = 0; } else warmLeft = WARM;
+  }
+
+  function loop(now) {
+    raf = 0;
+    if (!visible || document.hidden) return;
+    const dt = last ? Math.min(.05, (now - last) / 1000) : 1 / 60; last = now;
+    if (sized) {
+      if (warmLeft > 0) {
+        const n = Math.min(warmLeft, 130);
+        for (let s = 0; s < n; s++) step();
+        warmLeft -= n;
+        if (warmLeft > 0) { raf = requestAnimationFrame(loop); return; }
+      }
+      ptr.strength += ((ptr.has ? 1 : 0) - ptr.strength) * Math.min(1, dt / INJ_TAU);
+      if (ptr.strength > .01 && ptr.gx > -1e4) inject(ptr.gx, ptr.gy, ptr.strength);
+      for (let s = 0; s < SUB; s++) step();
+      draw();
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  const wake = () => { if (!raf && !reduce && visible && !document.hidden) { last = 0; raf = requestAnimationFrame(loop); } };
+
+  if (!reduce) {
+    area.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;
+      const b = area.getBoundingClientRect();
+      ptr.gx = (e.clientX - b.left) / cellW; ptr.gy = (e.clientY - b.top) / cellH; ptr.has = true;
+    });
+    area.addEventListener('pointerleave', () => { ptr.has = false; });
+  }
+  new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(area);
+  document.addEventListener('visibilitychange', wake);
+  // re-create the dish only when the hero really changes size
+  new ResizeObserver(() => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const b = area.getBoundingClientRect();
+      if (Math.abs(Math.round(b.width) - lastW) > 1 || Math.abs(Math.round(b.height) - lastH) > 40) { resize(); wake(); }
+    }, 200);
+  }).observe(area);
+
+  const start = () => { resize(); wake(); };
+  const fonts = document.fonts && document.fonts.load ? document.fonts.load(`${CELL}px "JetBrains Mono"`, 'M') : Promise.resolve();
+  fonts.then(() => document.fonts.ready).then(start, start);
+})();
 
 /* ---------- cursor ---------- */
 const cur = $('#cursor');
