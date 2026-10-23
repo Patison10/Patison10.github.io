@@ -1,0 +1,17 @@
+name = "barbershop-ai-bot"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Параметры ИИ (не секретные). Ключ AI_API_KEY задаётся секретом в панели Cloudflare.
+[vars]
+AI_BASE_URL = "https://openrouter.ai/api/v1"
+AI_MODEL = "google/gemma-4-31b-it:free"
+AI_FALLBACK_MODELS = "google/gemma-4-26b-a4b-it:free,poolside/laguna-s-2.1:free,poolside/laguna-xs-2.1:free"
+HISTORY_LIMIT = "16"
+RATE_LIMIT_PER_MIN = "8"
+
+# База D1 (SQLite от Cloudflare). Создаётся автоматически при деплое.
+[[d1_databases]]
+binding = "DB"
+database_name = "barbershop-bot"
