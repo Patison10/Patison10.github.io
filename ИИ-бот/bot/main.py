@@ -1,9 +1,12 @@
 import asyncio
 import logging
+import os
+import ssl
 import time
 from collections import defaultdict, deque
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
@@ -38,7 +41,10 @@ async def main() -> None:
     db = Database(s.db_path)
     ai = AIClient(s.ai_base_url, s.ai_api_key, s.ai_models)
     dialog = Dialog(db, ai, s.shop, s.history_limit)
-    bot, dp = Bot(s.token), Dispatcher()
+    session = AiohttpSession(proxy=os.getenv("TELEGRAM_PROXY") or None)
+    if os.getenv("TELEGRAM_CA_BUNDLE"):  # нужно только за прокси с собственным сертификатом
+        session._connector_init["ssl"] = ssl.create_default_context(cafile=os.environ["TELEGRAM_CA_BUNDLE"])
+    bot, dp = Bot(s.token, session=session), Dispatcher()
     hits: dict[int, deque] = defaultdict(deque)
 
     def is_admin(m: Message) -> bool:
