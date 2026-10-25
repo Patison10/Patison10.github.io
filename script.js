@@ -16,7 +16,7 @@ let cv = $('#grid'), ctx = null, gl = null, glLost = false;
 const hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
-  word: 'patson', face: '"Inter","Helvetica Neue",Arial,sans-serif', weight: 900,
+  word: 'patson', face: '"Geologica","Helvetica Neue",Arial,sans-serif', weight: 900,
   gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .08, margin: lite ? 40 : 70, fill: lite ? .94 : .9,
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
@@ -235,7 +235,7 @@ new ResizeObserver(() => {
 
 layout(); draw(performance.now());
 // the word is set in the real face once it has loaded
-if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Inter`, HW.word).then(() => { layout(); draw(performance.now()); });
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Geologica`, HW.word).then(() => { layout(); draw(performance.now()); });
 
 /* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
 // The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
