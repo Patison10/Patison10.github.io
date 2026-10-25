@@ -48,7 +48,7 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 :root{
-  --bg:#050505;--fg:#f2f2f2;--muted:#8a8a8a;--line:rgba(255,255,255,.1);--card:#0b0b0b;
+  --bg:#050505;--fg:#f2f2f2;--muted:#9b9b9b;--line:rgba(255,255,255,.1);--card:#0b0b0b;
   --red:#ff1f2d;--red2:#b3000f;--redglow:rgba(255,31,45,.55);
   --pad:clamp(20px,6vw,110px);
   --mono:"JetBrains Mono",ui-monospace,monospace;
@@ -616,7 +616,7 @@ html{overflow-x:clip}
 .stp output{min-width:2.2ch;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
 .cu-form textarea{width:100%;resize:vertical;font:inherit;font-size:.95rem;color:#fff;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:.9rem 1rem;outline:none;transition:border-color .25s}
 .cu-form textarea:focus{border-color:var(--red)}
-.cu-form textarea::placeholder{color:#777}
+.cu-form textarea::placeholder{color:#8f8f8f}
 .cu-sum{position:sticky;top:96px;display:flex;flex-direction:column;gap:.7rem;padding:1.4rem;border-radius:22px;background:rgba(8,8,10,.72);border:1px solid rgba(255,255,255,.14)}
 .cu-presets{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin-bottom:.4rem}
 .cu-presets span{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;color:var(--muted);width:100%}
@@ -646,3 +646,130 @@ html{overflow-x:clip}
 
 /* the halftone canvas covers only the band under the word (its height is set by script.js), not the whole hero */
 #grid{inset:auto 0 0 0;width:100%;height:auto}
+
+/* ===== portfolio: works from the Telegram channel ===== */
+.wk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;flex-wrap:wrap}
+.wk-side{display:flex;align-items:center;flex-wrap:wrap;gap:1.2rem 2rem}
+.wk-count{display:flex;align-items:center;gap:.8rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;line-height:1.35}
+.wk-count b{font-family:"Inter",sans-serif;font-size:clamp(3rem,6vw,5rem);font-weight:900;color:var(--red);letter-spacing:-.06em;line-height:.8;font-variant-numeric:tabular-nums}
+.wk-filters{display:flex;flex-wrap:wrap;gap:.5rem}
+.wk-filters button{font:inherit;font-size:.88rem;color:#d4d4d4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.18);border-radius:99px;padding:.6rem 1.05rem;min-height:40px;cursor:pointer;transition:background .3s,border-color .3s,color .3s}
+.wk-filters button:hover{border-color:#fff;color:#fff}
+.wk-filters sup{font-family:var(--mono);font-size:.62rem;margin-left:.35rem;color:var(--red);vertical-align:.5em}
+.wk-filters [aria-selected=true]{background:var(--red);border-color:var(--red);color:#000}
+.wk-filters [aria-selected=true] sup{color:#000}
+.wk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(16px,2vw,26px);margin-top:3rem;transition:opacity .26s,transform .26s var(--ease)}
+.wk-grid.swap{opacity:0;transform:translateY(14px)}
+.wk-grid+.sub{margin-top:3.5rem}
+.wk{position:relative;display:flex;flex-direction:column;gap:1rem;font:inherit;color:inherit;text-align:left;background:none;border:0;padding:0;cursor:pointer;transition-delay:var(--d,0s)}
+.wk[hidden]{display:none}
+.wk.wide{grid-column:1 / -1}
+.wk:focus-visible{outline:none}
+.wk:focus-visible .wk-media{outline:2px solid var(--red);outline-offset:4px}
+.wk-media{position:relative;display:block;aspect-ratio:16/10;border-radius:22px;overflow:hidden;background:#0a0a0b;border:1px solid rgba(255,255,255,.12);isolation:isolate;
+  transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s var(--ease),border-color .4s}
+.wk.wide .wk-media{aspect-ratio:21/9}
+.wk:hover .wk-media{border-color:rgba(255,31,45,.7)}
+/* black-and-red until hovered: the work shows its own colours only when you look at it */
+.wk-media video,.wk-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.06) brightness(.85);transition:filter .6s,transform .9s var(--ease)}
+.wk:hover .wk-media video,.wk:hover .wk-media img{filter:none;transform:scale(1.035)}
+.wk-media::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.5)),radial-gradient(90% 70% at 0% 100%,rgba(255,31,45,.28),transparent 60%);transition:opacity .5s}
+.wk:hover .wk-media::before{opacity:.35}
+/* red curtain that wipes away when the card comes into view */
+.js .wk-media::after{content:"";position:absolute;inset:-1px;z-index:5;background:var(--red);transform-origin:100% 50%;transition:transform .95s cubic-bezier(.77,0,.18,1) calc(var(--d,0s) + .12s);pointer-events:none}
+.js .wk.in .wk-media::after{transform:scaleX(0)}
+/* typographic cover for a work without a video file yet */
+.wk-art{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:.7rem;padding:clamp(1.1rem,2.4vw,2rem);overflow:hidden;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 64px),repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 64px),radial-gradient(110% 90% at 88% 112%,rgba(255,31,45,.5),transparent 56%),#070708}
+.wk-art::after{content:"";position:absolute;left:0;right:0;top:0;height:35%;background:linear-gradient(transparent,rgba(255,31,45,.13),transparent);animation:scan 5s linear infinite;pointer-events:none}
+@keyframes scan{from{transform:translateY(-100%)}to{transform:translateY(300%)}}
+.wk-art i{position:absolute;right:.25em;top:.05em;font-style:normal;font-size:clamp(5rem,13vw,12rem);font-weight:900;letter-spacing:-.07em;line-height:1;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.2);transition:-webkit-text-stroke-color .4s,transform .6s var(--ease)}
+.wk:hover .wk-art i{-webkit-text-stroke-color:var(--red);transform:translateY(-8px)}
+.wk-art b{position:relative;font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1.7rem,3.6vw,3.2rem);letter-spacing:-.02em;line-height:1;max-width:12em}
+.wk.wide .wk-art b{font-size:clamp(2rem,5.4vw,5rem)}
+.wk-art>span{position:relative;font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:#c4c4c4}
+.wk-art>span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:.6rem;vertical-align:.1em;animation:blink 2.4s infinite}
+/* «Смотреть» follows the pointer inside the card */
+.wk-play{position:absolute;left:0;top:0;z-index:4;display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.15rem;border-radius:99px;background:var(--red);color:#000;font-weight:700;font-size:.85rem;
+  translate:-50% -50%;opacity:0;scale:.5;transition:opacity .25s,scale .4s var(--ease);pointer-events:none;white-space:nowrap}
+.wk:hover .wk-play{opacity:1;scale:1}
+.wk:focus-visible .wk-play{opacity:1;scale:1;left:50%;top:50%;transform:none!important}
+.wk-meta{display:grid;gap:.4rem;padding:0 3.6rem 0 .2rem}
+.wk-meta small{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.wk-meta strong{font-size:clamp(1.3rem,2.2vw,1.9rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;transition:color .3s}
+.wk:hover .wk-meta strong{color:var(--red)}
+.wk-tags,.wv-tags{display:flex;flex-wrap:wrap;gap:.35rem}
+.wk-tags em,.wv-tags em{font-style:normal;font-size:.76rem;border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:.22rem .65rem;color:#c4c4c4}
+.wk-go{position:absolute;right:.2rem;bottom:.3rem;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);font-style:normal;font-size:1.1rem;transition:background .35s,color .35s,border-color .35s,transform .5s var(--ease)}
+.wk:hover .wk-go{background:var(--red);border-color:var(--red);color:#000;transform:rotate(45deg)}
+@media (max-width:760px){
+  .wk-grid{grid-template-columns:1fr}
+  .wk.wide .wk-media{aspect-ratio:16/10}
+}
+@media (hover:none){
+  .wk-play{left:.9rem;top:.9rem;translate:none;opacity:1;scale:1;padding:.55rem .95rem;font-size:.8rem}
+  .wk-media video,.wk-media img{filter:none}
+}
+
+/* viewer: opens out of the card */
+html.wv-lock{overflow:hidden}
+.wk-view{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:clamp(10px,3vw,40px)}
+.wk-view[hidden]{display:none}
+.wv-bg{position:absolute;inset:0;background:rgba(3,3,3,.93);opacity:0;transition:opacity .45s}
+.wk-view.open .wv-bg{opacity:1}
+.wv-box{position:relative;width:min(1240px,100%);max-height:100%;overflow:hidden auto;overscroll-behavior:contain;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);
+  background:#0b0b0c;border:1px solid rgba(255,255,255,.12);border-radius:22px;clip-path:inset(0 0 0 0 round 22px);transition:clip-path .55s cubic-bezier(.77,0,.18,1)}
+.wv-media{position:relative;background:#000;aspect-ratio:16/10}
+.wv-media video,.wv-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.wv-media .wk-art b{font-size:clamp(2rem,5vw,4.4rem)}
+.wv-tg{position:absolute;left:50%;top:50%;translate:-50% -50%;z-index:2;white-space:nowrap}
+.wv-info{display:flex;flex-direction:column;gap:1rem;padding:clamp(1.3rem,3vw,2.4rem)}
+.wv-info>*{opacity:0;transform:translateY(14px);transition:opacity .5s,transform .6s var(--ease)}
+.wk-view.open .wv-info>*{opacity:1;transform:none}
+.wv-info>:nth-child(2){transition-delay:.06s}.wv-info>:nth-child(3){transition-delay:.12s}.wv-info>:nth-child(4){transition-delay:.18s}.wv-info>:nth-child(5){transition-delay:.24s}.wv-info>:nth-child(6){transition-delay:.3s}
+.wv-info small{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;color:var(--red);text-transform:uppercase;padding-right:3rem}
+.wv-info h3{font-size:clamp(1.8rem,3vw,2.6rem);font-weight:900;letter-spacing:-.04em;line-height:1.02}
+.wv-info p{color:#b8b8b8;line-height:1.65}
+.wv-acts{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:auto;padding-top:.6rem}
+.wv-acts .btn{padding:.85rem 1.3rem;font-size:.9rem}
+.wv-nav{display:flex;align-items:center;gap:1rem;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.wv-nav button,.wv-x{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.22);font:inherit;font-size:1rem;cursor:pointer;transition:background .3s,color .3s,border-color .3s}
+.wv-nav button:hover,.wv-x:hover{background:var(--red);border-color:var(--red);color:#000}
+.wv-x{position:absolute;top:12px;right:12px;z-index:3}
+@media (max-width:900px){
+  .wv-box{grid-template-columns:minmax(0,1fr)}
+  .wv-acts .btn{flex:1 1 auto;justify-content:center}
+}
+
+/* ===== headings: words rise out of a mask ===== */
+.js .split-on.reveal:not(.in){opacity:1;transform:none}
+.split-on .w{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .1em .14em 0;margin:0 -.1em -.14em 0}
+.split-on .wi{display:inline-block;transform:translateY(112%) rotate(4deg);transform-origin:0 100%;transition:transform 1.05s var(--ease) calc(var(--i) * .065s)}
+.split-on.in .wi{transform:none}
+/* once the words are up, the mask is dropped so the glow of the red words is not cut into boxes */
+.split-on.done .w{overflow:visible}
+
+/* ===== buttons: the label rolls up on hover ===== */
+.roll{display:inline-block;overflow:hidden;vertical-align:top;line-height:1.3;white-space:nowrap}
+.roll>span{position:relative;display:inline-block;transition:transform .5s var(--ease)}
+.roll>span::after{content:attr(data-t);position:absolute;left:0;top:100%}
+:is(.btn,.nav-cta):hover .roll>span{transform:translateY(-100%)}
+
+/* ===== nav: red pill under the section on screen ===== */
+.nav nav{position:relative;isolation:isolate}
+.nav nav a{position:relative;z-index:1}
+.nav nav a.on{color:#fff}
+.nav-ind{position:absolute;left:0;top:50%;height:2.1rem;margin-top:-1.05rem;border-radius:99px;background:rgba(255,31,45,.16);border:1px solid rgba(255,31,45,.55);opacity:0;z-index:0;
+  transition:transform .55s var(--ease),width .55s var(--ease),opacity .3s}
+.nav-ind.on{opacity:1}
+
+/* ===== second tape crossing the red one ===== */
+.marquee{position:relative;z-index:2}
+.marquee.m2{z-index:1;background:#050505;color:transparent;border-color:rgba(255,31,45,.5);transform:rotate(1.6deg);box-shadow:none;margin-top:-.3rem}
+.m2 .track{animation-direction:reverse;animation-duration:36s}
+.m2 .track span{-webkit-text-stroke:1px var(--red)}
+
+@media (prefers-reduced-motion:reduce){
+  .wv-box{clip-path:none}
+  .wv-info>*{opacity:1;transform:none}
+}

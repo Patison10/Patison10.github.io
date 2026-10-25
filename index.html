@@ -33,8 +33,9 @@
 <header class="nav" id="nav">
   <a href="#hero" class="logo"><i></i>Patson</a>
   <nav>
+    <i class="nav-ind" id="navInd" aria-hidden="true"></i>
     <a href="#problem">Зачем</a>
-    <a href="#portfolio">Портфолио</a>
+    <a href="#portfolio">Работы</a>
     <a href="#included">Что входит</a>
     <a href="#pricing">Цены</a>
     <a href="#faq">FAQ</a>
@@ -90,6 +91,9 @@
   <!-- MARQUEE -->
   <div class="marquee" aria-hidden="true">
     <div class="track"><span>ДИЗАЙН ✦ КОД ✦ АНИМАЦИИ ✦ РЕЗУЛЬТАТ ✦ </span><span>ДИЗАЙН ✦ КОД ✦ АНИМАЦИИ ✦ РЕЗУЛЬТАТ ✦ </span><span>ДИЗАЙН ✦ КОД ✦ АНИМАЦИИ ✦ РЕЗУЛЬТАТ ✦ </span></div>
+  </div>
+  <div class="marquee m2" aria-hidden="true">
+    <div class="track"><span>ЛЕНДИНГИ ✦ МАГАЗИНЫ ✦ БОТЫ ✦ АВТОМАТИЗАЦИЯ ✦ </span><span>ЛЕНДИНГИ ✦ МАГАЗИНЫ ✦ БОТЫ ✦ АВТОМАТИЗАЦИЯ ✦ </span><span>ЛЕНДИНГИ ✦ МАГАЗИНЫ ✦ БОТЫ ✦ АВТОМАТИЗАЦИЯ ✦ </span></div>
   </div>
 
   <!-- PROBLEM -->
@@ -157,8 +161,15 @@
   <!-- PORTFOLIO -->
   <section id="portfolio" class="portfolio">
     <p class="label reveal" data-scramble><span>03</span> ПОРТФОЛИО</p>
-    <h2 class="h2 reveal">Посмотри мои <span class="red">работы</span></h2>
-    <p class="sub reveal">Портфолио можно изучить в двух местах — выбирай, где удобнее.</p>
+    <div class="wk-head">
+      <h2 class="h2 reveal">Посмотри мои <span class="red">работы</span></h2>
+      <div class="wk-side reveal">
+        <p class="wk-count"><b id="wkCount">0</b><span>работ<br>в портфолио</span></p>
+        <div class="wk-filters" id="wkFilters" role="tablist" aria-label="Тип работы"></div>
+      </div>
+    </div>
+    <div class="wk-grid" id="wkGrid"></div>
+    <p class="sub reveal">Ещё больше работ и разборов — на Kwork и в моём Telegram-канале.</p>
     <div class="pf-grid">
       <a class="pf reveal spot" href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" data-magnetic>
         <span class="pf-ico">K</span>
@@ -330,6 +341,23 @@
 
 <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="sticky" id="sticky">Заказать на Kwork →</a>
 
+<div class="wk-view" id="wkView" role="dialog" aria-modal="true" aria-labelledby="wvTitle" hidden>
+  <div class="wv-bg" data-close></div>
+  <div class="wv-box" id="wvBox">
+    <div class="wv-media" id="wvMedia"></div>
+    <div class="wv-info">
+      <small id="wvKind"></small>
+      <h3 id="wvTitle"></h3>
+      <p id="wvText"></p>
+      <p class="wv-tags" id="wvTags"></p>
+      <div class="wv-acts" id="wvActs"></div>
+      <div class="wv-nav"><button type="button" id="wvPrev" aria-label="Предыдущая работа">←</button><span id="wvNum"></span><button type="button" id="wvNext" aria-label="Следующая работа">→</button></div>
+    </div>
+    <button type="button" class="wv-x" data-close aria-label="Закрыть">✕</button>
+  </div>
+</div>
+
+<script src="works.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

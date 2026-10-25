@@ -438,6 +438,199 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   fonts.then(() => document.fonts.ready).then(start, start);
 })();
 
+/* ---------- portfolio: works from the Telegram channel (data in works.js) ---------- */
+// Cards are built from window.WORKS. A work with a video file plays a muted preview on hover (on phones: the card that
+// is most in view), without one the card shows a typographic cover and the viewer leads to the post in the channel.
+// The viewer opens out of the card (clip-path from the card's rectangle), Esc / ← → / swipe work.
+(() => {
+  const grid = $('#wkGrid'), list = (window.WORKS || []).filter(w => w && w.title);
+  if (!grid) return;
+  const TG = 'https://t.me/Patisonooochik';
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const num = i => String(i + 1).padStart(2, '0');
+  const play = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const art = (w, i) => `<span class="wk-art"><i>${num(i)}</i><b>${esc(w.title)}</b><span>${w.video ? 'видео' : 'видео в Telegram'} · ${esc(w.time || '')}</span></span>`;
+
+  $('#wkCount').dataset.count = list.length;
+  grid.innerHTML = list.map((w, i) => `
+    <button type="button" class="wk reveal spot" data-i="${i}" data-kind="${esc(w.kind)}" style="--d:${(i % 3) * .09}s">
+      <span class="wk-media">
+        ${w.video ? `<video muted loop playsinline preload="none"${w.poster ? ` poster="${esc(w.poster)}"` : ''} data-src="${esc(w.video)}"></video>` : (w.poster ? `<img src="${esc(w.poster)}" alt="" loading="lazy">` : '')}
+        ${w.video || w.poster ? '' : art(w, i)}
+        <span class="wk-play" aria-hidden="true">${play}<span>Смотреть</span></span>
+      </span>
+      <span class="wk-meta">
+        <small>${num(i)} · ${esc(w.kind)}${w.time ? ' · ' + esc(w.time) : ''}</small>
+        <strong>${esc(w.title)}</strong>
+        <span class="wk-tags">${(w.tags || []).map(t => `<em>${esc(t)}</em>`).join('')}</span>
+      </span>
+      <i class="wk-go" aria-hidden="true">↗</i>
+    </button>`).join('');
+  const cards = $$('.wk', grid);
+
+  // filters: «Все» + every kind that exists; the first visible card is the wide one
+  const kinds = [...new Set(list.map(w => w.kind).filter(Boolean))];
+  const fl = $('#wkFilters');
+  if (kinds.length > 1) {
+    fl.innerHTML = ['Все', ...kinds].map((k, i) => `<button type="button" role="tab" aria-selected="${!i}" data-k="${i ? esc(k) : ''}">${esc(k)}<sup>${i ? list.filter(w => w.kind === k).length : list.length}</sup></button>`).join('');
+    fl.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      $$('button', fl).forEach(x => x.setAttribute('aria-selected', x === b));
+      const k = b.dataset.k;
+      grid.classList.add('swap');
+      setTimeout(() => {
+        cards.forEach(c => { c.hidden = !!k && c.dataset.kind !== k; c.classList.add('in'); });
+        layoutWide(); grid.classList.remove('swap');
+      }, reduce ? 0 : 260);
+    });
+  } else fl.remove();
+  const layoutWide = () => { let first = true; cards.forEach(c => { c.classList.toggle('wide', !c.hidden && first); if (!c.hidden) first = false; }); };
+  layoutWide();
+
+  // video previews: the file is attached only when the card comes near the screen (first frame as the poster)
+  const vids = cards.map(c => $('video', c));
+  const near = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const v = $('video', e.target); near.unobserve(e.target);
+    if (v && !v.src) { v.preload = 'metadata'; v.src = v.dataset.src + (v.poster ? '' : '#t=0.1'); }
+  }), { rootMargin: '400px' });
+  cards.forEach(c => near.observe(c));
+  const start = v => { if (v && v.src && !reduce) { const p = v.play(); if (p) p.catch(() => {}); } };
+  const stop = v => { if (v && !v.paused) v.pause(); };
+  if (!touch) cards.forEach((c, i) => {
+    c.addEventListener('pointerenter', () => start(vids[i]));
+    c.addEventListener('pointerleave', () => stop(vids[i]));
+  });
+  else { // phones: only the card that is most in view plays
+    const ratio = new Map();
+    const pick = new IntersectionObserver(es => {
+      es.forEach(e => ratio.set(e.target, e.intersectionRatio));
+      let best = null, r = .55;
+      ratio.forEach((v, c) => { if (v > r) { r = v; best = c; } });
+      cards.forEach((c, i) => c === best ? start(vids[i]) : stop(vids[i]));
+    }, { threshold: [0, .3, .55, .8, 1] });
+    cards.forEach((c, i) => vids[i] && pick.observe(c));
+  }
+
+  // the «Смотреть» label follows the pointer inside the card, the card tilts a little toward it
+  if (!touch && !reduce) cards.forEach(c => {
+    const lab = $('.wk-play', c), media = $('.wk-media', c);
+    let q = 0, px = 0, py = 0;
+    const apply = () => {
+      q = 0;
+      const r = media.getBoundingClientRect(), x = px - r.left, y = py - r.top;
+      lab.style.transform = `translate(${x.toFixed(0)}px,${y.toFixed(0)}px)`;
+      const cr = c.getBoundingClientRect();
+      c.style.setProperty('--rx', ((py - cr.top) / cr.height - .5) * -4 + 'deg');
+      c.style.setProperty('--ry', ((px - cr.left) / cr.width - .5) * 5 + 'deg');
+    };
+    c.addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; if (!q) q = requestAnimationFrame(apply); });
+    c.addEventListener('pointerleave', () => { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); });
+  });
+
+  // ---- viewer ----
+  const view = $('#wkView'), box = $('#wvBox'), media = $('#wvMedia');
+  let cur = -1, from = null, lastFocus = null;
+  const visible = () => cards.filter(c => !c.hidden).map(c => +c.dataset.i);
+  function fill(i) {
+    const w = list[i]; cur = i;
+    media.innerHTML = w.video
+      ? `<video controls autoplay playsinline src="${esc(w.video)}"${w.poster ? ` poster="${esc(w.poster)}"` : ''}></video>`
+      : `${w.poster ? `<img src="${esc(w.poster)}" alt="">` : art(w, i)}<a class="wv-tg btn primary" href="${esc(w.post)}" target="_blank" rel="noopener">${play}<span>Смотреть видео в Telegram</span></a>`;
+    $('#wvKind').textContent = `${num(i)} · ${w.kind || ''}${w.time ? ' · ' + w.time : ''}`;
+    $('#wvTitle').textContent = w.title;
+    $('#wvText').textContent = w.text || '';
+    $('#wvTags').innerHTML = (w.tags || []).map(t => `<em>${esc(t)}</em>`).join('');
+    const want = `Здравствуйте, Максим! Хочу сайт как «${w.title}» из вашего портфолио.`;
+    $('#wvActs').innerHTML =
+      `<a class="btn primary" href="${TG}?text=${encodeURIComponent(want)}" target="_blank" rel="noopener"><span>Хочу такой же</span></a>` +
+      (w.site ? `<a class="btn ghost" href="${esc(w.site)}" target="_blank" rel="noopener"><span>Открыть сайт</span></a>` : '') +
+      (w.post ? `<a class="btn ghost" href="${esc(w.post)}" target="_blank" rel="noopener"><span>Пост в канале</span></a>` : '');
+    const vis = visible();
+    $('#wvNum').textContent = `${vis.indexOf(i) + 1} / ${vis.length}`;
+  }
+  // clip-path inset that matches a rectangle on the screen, relative to the viewer box
+  const insetOf = r => {
+    const b = box.getBoundingClientRect(), c = v => Math.max(0, v).toFixed(1) + 'px';
+    return `inset(${c(r.top - b.top)} ${c(b.right - r.right)} ${c(b.bottom - r.bottom)} ${c(r.left - b.left)} round 22px)`;
+  };
+  function open(i, card) {
+    lastFocus = document.activeElement; from = card;
+    fill(i);
+    view.hidden = false; document.documentElement.classList.add('wv-lock');
+    if (!reduce) {
+      box.style.transition = 'none'; box.style.clipPath = insetOf($('.wk-media', card).getBoundingClientRect());
+      box.getBoundingClientRect();
+      box.style.transition = ''; box.style.clipPath = 'inset(0 0 0 0 round 22px)';
+    }
+    requestAnimationFrame(() => view.classList.add('open'));
+    $('.wv-x', view).focus({ preventScroll: true });
+  }
+  function close() {
+    if (view.hidden) return;
+    const v = $('video', media); if (v) v.pause();
+    view.classList.remove('open');
+    const card = cards[cur] && !cards[cur].hidden ? cards[cur] : from;
+    if (!reduce && card) box.style.clipPath = insetOf($('.wk-media', card).getBoundingClientRect());
+    setTimeout(() => { view.hidden = true; media.innerHTML = ''; document.documentElement.classList.remove('wv-lock'); }, reduce ? 0 : 520);
+    if (lastFocus) lastFocus.focus({ preventScroll: true });
+  }
+  const step = d => { const vis = visible(), k = vis.indexOf(cur); if (vis.length > 1) fill(vis[(k + d + vis.length) % vis.length]); };
+  grid.addEventListener('click', e => { const c = e.target.closest('.wk'); if (c) open(+c.dataset.i, c); });
+  view.addEventListener('click', e => { if (e.target.closest('[data-close]')) close(); });
+  $('#wvPrev').addEventListener('click', () => step(-1));
+  $('#wvNext').addEventListener('click', () => step(1));
+  addEventListener('keydown', e => {
+    if (view.hidden) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (e.target.closest && e.target.closest('video')) return; // the player seeks with the arrows
+      e.preventDefault(); step(e.key === 'ArrowLeft' ? -1 : 1);
+    }
+    else if (e.key === 'Tab') { // keep the focus inside the viewer
+      const f = $$('a,button,video', box).filter(x => x.offsetParent);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  let sx = 0, sy = 0;
+  box.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  box.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && !e.target.closest('video')) step(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+/* ---------- headings: words rise out of a mask ---------- */
+function splitWords(el) {
+  let n = 0;
+  (function walk(node) {
+    [...node.childNodes].forEach(ch => {
+      if (ch.nodeType === 1) return walk(ch);
+      if (ch.nodeType !== 3 || !ch.textContent.trim()) return;
+      const frag = document.createDocumentFragment();
+      ch.textContent.split(/(\s+)/).forEach(part => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) return frag.append(' ');
+        const w = document.createElement('span'), i = document.createElement('span');
+        w.className = 'w'; i.className = 'wi'; i.style.setProperty('--i', n++); i.textContent = part;
+        w.append(i); frag.append(w);
+      });
+      ch.replaceWith(frag);
+    });
+  })(el);
+  el.classList.add('split-on');
+}
+if (!reduce) $$('.h2.reveal, .big.reveal').forEach(splitWords);
+
+/* ---------- buttons: the label rolls up on hover ---------- */
+$$('.btn > span, .nav-cta').forEach(el => {
+  if (el.children.length) return;
+  const t = el.textContent;
+  el.innerHTML = `<span class="roll"><span data-t="${t.replace(/"/g, '&quot;')}">${t}</span></span>`;
+});
+
 /* ---------- cursor: a single ring that replaces the system arrow ---------- */
 const cur = $('#cursor');
 if (!touch) {
@@ -456,10 +649,9 @@ if (!touch) {
     if (!raf2) raf2 = requestAnimationFrame(follow);
   });
   root.addEventListener('mouseleave', () => cur.classList.remove('on'));
-  $$('a,summary').forEach(el => {
-    el.addEventListener('pointerenter', () => cur.classList.add('big'));
-    el.addEventListener('pointerleave', () => cur.classList.remove('big'));
-  });
+  // delegated, so links and buttons created later (portfolio viewer) count too
+  const hot = t => t.closest && t.closest('a,summary,button');
+  document.addEventListener('pointerover', e => cur.classList.toggle('big', !!hot(e.target)));
 }
 
 /* ---------- magnetic ---------- */
@@ -510,6 +702,8 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (!e.isIntersecting) return;
   e.target.classList.add('in');
   if (e.target.hasAttribute('data-scramble') && !reduce) scramble(e.target);
+  $$('[data-count]', e.target).forEach(countUp);
+  if (e.target.classList.contains('split-on')) setTimeout(() => e.target.classList.add('done'), 1100 + $$('.wi', e.target).length * 65);
   io.unobserve(e.target);
 }), { threshold: .18 });
 $$('.reveal').forEach(el => io.observe(el));
@@ -543,6 +737,26 @@ function update() {
 }
 function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
 addEventListener('scroll', onScroll, { passive: true }); update();
+
+/* ---------- nav: a red pill slides under the link of the section on screen ---------- */
+(() => {
+  const ind = $('#navInd'), links = $$('.nav nav a');
+  if (!ind || !links.length) return;
+  const secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
+  let active = null;
+  const set = a => {
+    if (a === active) return; active = a;
+    links.forEach(l => l.classList.toggle('on', l === a));
+    ind.classList.toggle('on', !!a);
+    if (a) { ind.style.width = a.offsetWidth + 24 + 'px'; ind.style.transform = `translateX(${a.offsetLeft - 12}px)`; }
+  };
+  // a thin line across the middle of the screen: whichever section crosses it is the active one
+  const obs = new IntersectionObserver(() => {
+    const mid = innerHeight / 2, hit = secs.find(s => { const r = s.getBoundingClientRect(); return r.top < mid && r.bottom > mid; });
+    set(hit ? links[secs.indexOf(hit)] : null);
+  }, { rootMargin: '-49% 0px -49% 0px' });
+  secs.forEach(s => obs.observe(s));
+})();
 
 /* ---------- hero stage parallax ---------- */
 const fls = $$('.fl');
