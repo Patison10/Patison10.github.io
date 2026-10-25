@@ -16,7 +16,7 @@ let cv = $('#grid'), ctx = null, gl = null, glLost = false;
 const hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
-  word: 'patson', face: '"Geologica","Helvetica Neue",Arial,sans-serif', weight: 900,
+  word: 'patson', face: '"Unbounded","Geologica","Helvetica Neue",Arial,sans-serif', weight: 800,
   gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .08, margin: lite ? 40 : 70, fill: lite ? .94 : .9,
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
@@ -235,7 +235,7 @@ new ResizeObserver(() => {
 
 layout(); draw(performance.now());
 // the word is set in the real face once it has loaded
-if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Geologica`, HW.word).then(() => { layout(); draw(performance.now()); });
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Unbounded`, HW.word).then(() => { layout(); draw(performance.now()); });
 
 /* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
 // The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
@@ -469,7 +469,7 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
         <strong>${esc(w.title)}</strong>
         <span class="wk-tags">${(w.tags || []).map(t => `<em>${esc(t)}</em>`).join('')}</span>
       </span>
-      <i class="wk-go" aria-hidden="true">↗</i>
+      <i class="wk-go" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></i>
     </button>`).join('');
   const cards = $$('.wk', grid);
 
@@ -611,6 +611,31 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   }, { passive: true });
 })();
 
+/* ---------- hero: «Максим делает …» types itself, then erases like Backspace ---------- */
+(() => {
+  const el = $('#typed');
+  if (!el || reduce) return;
+  const words = ['лендинг', 'Telegram-бота', 'бота-парсер', 'интернет-магазин', 'сайт-визитку', 'админ-панель',
+    'интеграцию ИИ', 'автопостинг в соцсети', 'калькулятор цен', 'CRM-интеграцию'];
+  let w = 0, n = el.textContent.length, del = true, onScreen = true;
+  new IntersectionObserver(e => { onScreen = e[0].isIntersecting; }).observe(el);
+  (function tick() {
+    let wait;
+    if (!onScreen || document.hidden) wait = 400; // nothing to look at: just check again later
+    else if (del) {
+      el.textContent = words[w].slice(0, --n);
+      wait = n ? 26 + Math.random() * 18 : 320;
+      if (!n) { del = false; w = (w + 1) % words.length; }
+    } else {
+      el.textContent = words[w].slice(0, ++n);
+      wait = n < words[w].length ? 55 + Math.random() * 55 : 1700;
+      if (n === words[w].length) del = true;
+    }
+    el.parentNode.classList.toggle('typing', wait < 300);
+    setTimeout(tick, wait);
+  })();
+})();
+
 /* ---------- headings: words rise out of a mask ---------- */
 function splitWords(el) {
   let n = 0;
@@ -662,6 +687,21 @@ if (!touch) {
   const hot = t => t.closest && t.closest('a,summary,button');
   document.addEventListener('pointerover', e => cur.classList.toggle('big', !!hot(e.target)));
 }
+
+/* ---------- clicks: a ripple inside the button and red sparks out of the click point ---------- */
+if (!reduce) document.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  const b = e.target.closest && e.target.closest('.btn,.nav-cta,.sticky,.cta');
+  if (b) {
+    const r = b.getBoundingClientRect(), rip = document.createElement('span');
+    rip.className = 'rip'; rip.style.setProperty('--x', e.clientX - r.left + 'px'); rip.style.setProperty('--y', e.clientY - r.top + 'px');
+    b.append(rip); rip.addEventListener('animationend', () => rip.remove());
+  }
+  const s = document.createElement('div'), turn = Math.random() * 45;
+  s.className = 'spark'; s.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+  s.innerHTML = Array.from({ length: 8 }, (_, i) => `<i style="--a:${turn + i * 45}deg"></i>`).join('');
+  document.body.append(s); setTimeout(() => s.remove(), 600);
+}, { passive: true });
 
 /* ---------- magnetic ---------- */
 if (!touch && !reduce) $$('[data-magnetic]').forEach(el => {
@@ -929,11 +969,11 @@ if (iris && eyeSvg && !reduce) {
 
   // phones: while the calculator is on screen the bottom button shows the live total and jumps to the summary
   const sticky = $('#sticky');
-  const stickyOrig = { text: sticky.textContent, href: sticky.getAttribute('href'), target: sticky.getAttribute('target') };
+  const stickyOrig = { text: sticky.innerHTML, href: sticky.getAttribute('href'), target: sticky.getAttribute('target') };
   let inView = false;
   function syncSticky() {
-    if (inView) { sticky.textContent = `Итого ${fmt(calc().total)} · к оформлению ↓`; sticky.setAttribute('href', '#cuSum'); sticky.removeAttribute('target'); }
-    else { sticky.textContent = stickyOrig.text; sticky.setAttribute('href', stickyOrig.href); if (stickyOrig.target) sticky.setAttribute('target', stickyOrig.target); }
+    if (inView) { sticky.innerHTML = `Итого ${fmt(calc().total)} · к оформлению <svg class="ic" viewBox="0 0 24 24" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d="M12 5v14M6 13l6 6 6-6"/></svg>`; sticky.setAttribute('href', '#cuSum'); sticky.removeAttribute('target'); }
+    else { sticky.innerHTML = stickyOrig.text; sticky.setAttribute('href', stickyOrig.href); if (stickyOrig.target) sticky.setAttribute('target', stickyOrig.target); }
   }
   new IntersectionObserver(e => { inView = e[0].isIntersecting && matchMedia('(max-width:900px)').matches; syncSticky(); }, { threshold: .05 }).observe($('.cu-form', root));
   render();
