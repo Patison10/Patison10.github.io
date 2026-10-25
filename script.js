@@ -457,7 +457,7 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   $('#wkCount').dataset.count = list.length;
   grid.innerHTML = list.map((w, i) => `
     <button type="button" class="wk reveal spot" data-i="${i}" data-kind="${esc(w.kind)}" style="--d:${(i % 3) * .09}s">
-      <span class="wk-media">
+      <span class="wk-media${w.tall ? ' tall' : ''}">
         ${w.posters[0] ? `<img src="${esc(w.posters[0])}" alt="" loading="lazy" decoding="async">` : ''}
         ${w.clips[0] && !touch ? `<video muted loop playsinline preload="none" data-src="${esc(w.clips[0])}"></video>` : ''}
         ${w.clips.length || w.posters.length ? '' : art(w, i)}

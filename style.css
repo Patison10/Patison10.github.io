@@ -673,8 +673,13 @@ html{overflow-x:clip}
 /* black-and-red until hovered: the work shows its own colours only when you look at it */
 .wk-media video,.wk-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.06) brightness(.85);transition:filter .6s,transform .9s var(--ease)}
 .wk:hover .wk-media video,.wk:hover .wk-media img{filter:none;transform:scale(1.035)}
+/* a phone recording (vertical video) is shown whole, standing in the middle of the card */
+.wk-media.tall{background:radial-gradient(60% 90% at 50% 100%,rgba(255,31,45,.3),transparent 70%),repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 64px),#070708}
+.wk-media.tall img,.wk-media.tall video{object-fit:contain;padding:4% 0 0}
+.wk:hover .wk-media.tall img,.wk:hover .wk-media.tall video{transform:scale(1.02)}
 .wk-media video{opacity:0;transition:opacity .4s,filter .6s,transform .9s var(--ease)}
 .wk-media video.on{opacity:1}
+.wk-media:has(video.on) img{opacity:0;transition:opacity .4s .3s}
 .wk-n{position:absolute;top:.9rem;right:.9rem;z-index:3;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:.35rem .75rem}
 .wv-clips{position:absolute;left:.8rem;top:.8rem;right:4.4rem;z-index:2;display:flex;flex-wrap:wrap;gap:.4rem}
 .wv-clips button{font:inherit;font-size:.8rem;font-weight:600;color:#fff;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:.45rem .85rem;min-height:36px;cursor:pointer;transition:background .3s,color .3s,border-color .3s}
