@@ -892,19 +892,32 @@ html.wv-lock{overflow:hidden}
 .btn.ghost .rip,.cta .rip{background:radial-gradient(circle,rgba(255,31,45,.7),rgba(255,31,45,0) 70%)}
 @keyframes rip{to{transform:scale(28);opacity:0}}
 
-/* click sparks: short red strokes fly out of the click point (anywhere on the page) */
-.spark{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:121}
-.spark i{position:absolute;left:-1px;top:-14px;width:2px;height:10px;border-radius:2px;background:var(--red);box-shadow:0 0 6px rgba(255,31,45,.8);
-  transform-origin:1px 14px;transform:rotate(var(--a)) translateY(0) scaleY(1);animation:spark .5s cubic-bezier(.2,.7,.3,1) forwards}
-.spark i:nth-child(odd){background:#fff;box-shadow:0 0 6px rgba(255,255,255,.7)}
-@keyframes spark{to{transform:rotate(var(--a)) translateY(-16px) scaleY(.2);opacity:0}}
+/* press on glass: a lens bends the page under the finger while it is held, then a fingerprint stays and melts */
+.press{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:121}
+.press .lens{position:absolute;left:-30px;top:-30px;width:60px;height:60px;border-radius:50%;
+  -webkit-backdrop-filter:blur(1px) brightness(1.45) saturate(1.7) contrast(1.05);backdrop-filter:blur(1px) brightness(1.45) saturate(1.7) contrast(1.05);
+  background:radial-gradient(ellipse 30% 20% at 34% 28%,rgba(255,255,255,.55),transparent 70%),radial-gradient(circle,transparent 58%,rgba(255,255,255,.28) 68%,rgba(255,255,255,.06) 71%,transparent 72%);
+  box-shadow:inset 0 0 10px rgba(255,255,255,.18),inset 0 -5px 10px rgba(255,31,45,.14),0 0 0 1px rgba(255,255,255,.22);
+  transform:scale(.35);opacity:0;animation:lens-in .35s cubic-bezier(.2,.9,.3,1.2) forwards}
+.press.up .lens{animation:lens-out .45s ease-out forwards}
+@keyframes lens-in{to{transform:scale(1);opacity:1}}
+@keyframes lens-out{from{transform:scale(1);opacity:1}to{transform:scale(1.35);opacity:0}}
+.press .print{position:absolute;left:-18px;top:-23px;width:36px;height:46px;color:rgba(255,255,255,.78);transform:rotate(var(--r));opacity:0;
+  -webkit-mask:radial-gradient(closest-side,#000 55%,transparent);mask:radial-gradient(closest-side,#000 55%,transparent)}
+.press .print svg{width:100%;height:100%;display:block}
+.press.up .print{animation:print 3.6s ease-out forwards}
+@keyframes print{0%{opacity:.75;filter:blur(0)}25%{opacity:.55}100%{opacity:0;filter:blur(1.5px);transform:rotate(var(--r)) scale(1.06)}}
+/* confetti: pieces are moved by the Web Animations API from script.js */
+.cf{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:121;perspective:400px}
+.cf i{position:absolute;left:-3.5px;top:-6px;width:7px;height:12px;border-radius:1.5px;will-change:transform,opacity}
+@media (max-width:900px){.press .lens{-webkit-backdrop-filter:brightness(1.2);backdrop-filter:brightness(1.2)}}
 
 /* small controls get the same tasty feel */
 .wk-filters button,.cu-style,.cu-presets button{transition:background .3s,border-color .3s,color .3s,box-shadow .3s,scale .18s cubic-bezier(.3,1.6,.5,1)}
 .wk-filters button:hover,.cu-style:hover,.cu-presets button:hover{box-shadow:0 8px 24px -12px rgba(255,31,45,.8)}
 .stp button{transition:background .2s,color .2s,scale .18s cubic-bezier(.3,1.6,.5,1)}
 
-@media (prefers-reduced-motion:reduce){.spark,.rip{display:none}}
+@media (prefers-reduced-motion:reduce){.press,.cf,.rip{display:none}}
 
 /* keep the positioned ones where they are */
 .wv-tg{position:absolute}

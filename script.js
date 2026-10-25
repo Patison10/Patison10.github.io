@@ -688,20 +688,66 @@ if (!touch) {
   document.addEventListener('pointerover', e => cur.classList.toggle('big', !!hot(e.target)));
 }
 
-/* ---------- clicks: a ripple inside the button and red sparks out of the click point ---------- */
-if (!reduce) document.addEventListener('pointerdown', e => {
-  if (e.button > 0) return;
-  const b = e.target.closest && e.target.closest('.btn,.nav-cta,.sticky,.cta');
-  if (b) {
-    const r = b.getBoundingClientRect(), rip = document.createElement('span');
-    rip.className = 'rip'; rip.style.setProperty('--x', e.clientX - r.left + 'px'); rip.style.setProperty('--y', e.clientY - r.top + 'px');
-    b.append(rip); rip.addEventListener('animationend', () => rip.remove());
+/* ---------- clicks: a finger pressed on glass, a fingerprint left behind, confetti on buttons ---------- */
+// Any press bends the «glass» under the finger (a small lens that grows while held) and leaves a faint fingerprint
+// that melts away in a few seconds. Buttons also get a ripple from the press point and a small burst of confetti
+// in the site's colours. Everything is a few DOM nodes that remove themselves; nothing runs between clicks.
+(() => {
+  if (reduce) return;
+  // fingerprint: broken concentric ridges, built once and reused
+  const ridges = Array.from({ length: 9 }, (_, k) => {
+    const rx = 3 + k * 2.6, ry = 4 + k * 3.3, c = 2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2);
+    const gap = 2 + (k * 7) % 5, dash = (c / (2 + (k % 3))) - gap;
+    return `<ellipse cx="24" cy="30" rx="${rx}" ry="${ry}" stroke-dasharray="${dash.toFixed(1)} ${gap}" stroke-dashoffset="${(k * 13) % 17}"/>`;
+  }).join('');
+  const PRINT = `<svg viewBox="0 0 48 60" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round">${ridges}<path d="M14 49c4-3 7-9 8-17M33 48c-2-4-3-9-3-14"/></svg>`;
+  const COLORS = ['#ff1f2d', '#ffffff', '#ff6a73', '#b3000f', '#ffd0d3'];
+  const BTN = '.btn,.nav-cta,.sticky,.cta,.pf,.chan,button:not(.wk)';
+
+  function confetti(x, y, big) {
+    const box = document.createElement('div'); box.className = 'cf';
+    box.style.transform = `translate(${x}px,${y}px)`;
+    document.body.append(box);
+    const n = big ? 26 : 14, g = 1100;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('i'), round = Math.random() < .3;
+      el.style.background = COLORS[i % COLORS.length];
+      if (round) el.style.borderRadius = '50%', el.style.height = el.style.width = '6px';
+      box.append(el);
+      const a = (-90 + (Math.random() - .5) * 150) * Math.PI / 180, v = (big ? 330 : 240) + Math.random() * 260;
+      const vx = Math.cos(a) * v, vy = Math.sin(a) * v, spin = (Math.random() - .5) * 1080, dur = 900 + Math.random() * 600;
+      const frames = [];
+      for (let k = 0; k <= 8; k++) {
+        const t = k / 8 * dur / 1000;
+        frames.push({ transform: `translate(${(vx * t).toFixed(1)}px,${(vy * t + g * t * t / 2).toFixed(1)}px) rotate(${(spin * k / 8).toFixed(0)}deg) rotateX(${k * 70}deg)`, opacity: k < 6 ? 1 : (8 - k) / 3 });
+      }
+      el.animate(frames, { duration: dur, easing: 'cubic-bezier(.25,.6,.4,1)', fill: 'forwards' });
+    }
+    setTimeout(() => box.remove(), 1600);
   }
-  const s = document.createElement('div'), turn = Math.random() * 45;
-  s.className = 'spark'; s.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
-  s.innerHTML = Array.from({ length: 8 }, (_, i) => `<i style="--a:${turn + i * 45}deg"></i>`).join('');
-  document.body.append(s); setTimeout(() => s.remove(), 600);
-}, { passive: true });
+
+  document.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    const x = e.clientX, y = e.clientY;
+    // glass under the finger + the print it leaves
+    const pr = document.createElement('div');
+    pr.className = 'press'; pr.style.transform = `translate(${x}px,${y}px)`;
+    pr.innerHTML = `<i class="lens"></i><b class="print" style="--r:${(Math.random() * 50 - 25).toFixed(0)}deg">${PRINT}</b>`;
+    document.body.append(pr);
+    const up = () => { pr.classList.add('up'); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    setTimeout(() => pr.remove(), 4200);
+
+    const b = e.target.closest && e.target.closest(BTN);
+    if (!b) return;
+    if (b.matches('.btn,.nav-cta,.sticky,.cta')) {
+      const r = b.getBoundingClientRect(), rip = document.createElement('span');
+      rip.className = 'rip'; rip.style.setProperty('--x', x - r.left + 'px'); rip.style.setProperty('--y', y - r.top + 'px');
+      b.append(rip); rip.addEventListener('animationend', () => rip.remove());
+    }
+    confetti(x, y, b.getBoundingClientRect().width > 120);
+  }, { passive: true });
+})();
 
 /* ---------- magnetic ---------- */
 if (!touch && !reduce) $$('[data-magnetic]').forEach(el => {
