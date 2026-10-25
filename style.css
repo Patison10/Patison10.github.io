@@ -673,6 +673,13 @@ html{overflow-x:clip}
 /* black-and-red until hovered: the work shows its own colours only when you look at it */
 .wk-media video,.wk-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.06) brightness(.85);transition:filter .6s,transform .9s var(--ease)}
 .wk:hover .wk-media video,.wk:hover .wk-media img{filter:none;transform:scale(1.035)}
+.wk-media video{opacity:0;transition:opacity .4s,filter .6s,transform .9s var(--ease)}
+.wk-media video.on{opacity:1}
+.wk-n{position:absolute;top:.9rem;right:.9rem;z-index:3;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:.35rem .75rem}
+.wv-clips{position:absolute;left:.8rem;top:.8rem;right:4.4rem;z-index:2;display:flex;flex-wrap:wrap;gap:.4rem}
+.wv-clips button{font:inherit;font-size:.8rem;font-weight:600;color:#fff;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:.45rem .85rem;min-height:36px;cursor:pointer;transition:background .3s,color .3s,border-color .3s}
+.wv-clips button:hover{border-color:#fff}
+.wv-clips [aria-selected=true]{background:var(--red);border-color:var(--red);color:#000}
 .wk-media::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.5)),radial-gradient(90% 70% at 0% 100%,rgba(255,31,45,.28),transparent 60%);transition:opacity .5s}
 .wk:hover .wk-media::before{opacity:.35}
 /* red curtain that wipes away when the card comes into view */
@@ -720,6 +727,7 @@ html.wv-lock{overflow:hidden}
 .wv-box{position:relative;width:min(1240px,100%);max-height:100%;overflow:hidden auto;overscroll-behavior:contain;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);
   background:#0b0b0c;border:1px solid rgba(255,255,255,.12);border-radius:22px;clip-path:inset(0 0 0 0 round 22px);transition:clip-path .55s cubic-bezier(.77,0,.18,1)}
 .wv-media{position:relative;background:#000;aspect-ratio:16/10}
+@media (min-width:901px){.wv-media{aspect-ratio:auto;min-height:440px}}
 .wv-media video,.wv-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .wv-media .wk-art b{font-size:clamp(2rem,5vw,4.4rem)}
 .wv-tg{position:absolute;left:50%;top:50%;translate:-50% -50%;z-index:2;white-space:nowrap}

@@ -439,9 +439,11 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
 })();
 
 /* ---------- portfolio: works from the Telegram channel (data in works.js) ---------- */
-// Cards are built from window.WORKS. A work with a video file plays a muted preview on hover (on phones: the card that
-// is most in view), without one the card shows a typographic cover and the viewer leads to the post in the channel.
-// The viewer opens out of the card (clip-path from the card's rectangle), Esc / ← → / swipe work.
+// Cards are built from window.WORKS. A work with a video file shows its poster and plays a muted preview on hover; on
+// phones nothing plays by itself (no mobile data spent), the video loads only in the viewer. A work may have several
+// clips (video: [...]): the viewer gets clip tabs and goes on to the next clip when one ends. Without a video the card
+// shows a typographic cover and the viewer leads to the post in the channel. The viewer opens out of the card
+// (clip-path from the card's rectangle), Esc / ← → / swipe work.
 (() => {
   const grid = $('#wkGrid'), list = (window.WORKS || []).filter(w => w && w.title);
   if (!grid) return;
@@ -449,14 +451,17 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = i => String(i + 1).padStart(2, '0');
   const play = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
-  const art = (w, i) => `<span class="wk-art"><i>${num(i)}</i><b>${esc(w.title)}</b><span>${w.video ? 'видео' : 'видео в Telegram'} · ${esc(w.time || '')}</span></span>`;
+  const art = (w, i) => `<span class="wk-art"><i>${num(i)}</i><b>${esc(w.title)}</b><span>${w.clips.length ? 'видео' : 'видео в Telegram'} · ${esc(w.time || '')}</span></span>`;
+  list.forEach(w => { w.clips = [].concat(w.video || []).filter(Boolean); w.posters = [].concat(w.poster || []).filter(Boolean); });
 
   $('#wkCount').dataset.count = list.length;
   grid.innerHTML = list.map((w, i) => `
     <button type="button" class="wk reveal spot" data-i="${i}" data-kind="${esc(w.kind)}" style="--d:${(i % 3) * .09}s">
       <span class="wk-media">
-        ${w.video ? `<video muted loop playsinline preload="none"${w.poster ? ` poster="${esc(w.poster)}"` : ''} data-src="${esc(w.video)}"></video>` : (w.poster ? `<img src="${esc(w.poster)}" alt="" loading="lazy">` : '')}
-        ${w.video || w.poster ? '' : art(w, i)}
+        ${w.posters[0] ? `<img src="${esc(w.posters[0])}" alt="" loading="lazy" decoding="async">` : ''}
+        ${w.clips[0] && !touch ? `<video muted loop playsinline preload="none" data-src="${esc(w.clips[0])}"></video>` : ''}
+        ${w.clips.length || w.posters.length ? '' : art(w, i)}
+        ${w.clips.length > 1 ? `<span class="wk-n">${w.clips.length} ${w.clips.length < 5 ? 'ролика' : 'роликов'}</span>` : ''}
         <span class="wk-play" aria-hidden="true">${play}<span>Смотреть</span></span>
       </span>
       <span class="wk-meta">
@@ -487,30 +492,23 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   const layoutWide = () => { let first = true; cards.forEach(c => { c.classList.toggle('wide', !c.hidden && first); if (!c.hidden) first = false; }); };
   layoutWide();
 
-  // video previews: the file is attached only when the card comes near the screen (first frame as the poster)
+  // hover previews (mouse only): the poster is an <img>; the video file is attached when the card comes near the
+  // screen (only its index is read), it plays while the pointer is over the card and fades in over the poster
   const vids = cards.map(c => $('video', c));
   const near = new IntersectionObserver(es => es.forEach(e => {
     if (!e.isIntersecting) return;
     const v = $('video', e.target); near.unobserve(e.target);
-    if (v && !v.src) { v.preload = 'metadata'; v.src = v.dataset.src + (v.poster ? '' : '#t=0.1'); }
-  }), { rootMargin: '400px' });
-  cards.forEach(c => near.observe(c));
-  const start = v => { if (v && v.src && !reduce) { const p = v.play(); if (p) p.catch(() => {}); } };
+    if (v && !v.src) { v.preload = 'metadata'; v.src = v.dataset.src; }
+  }), { rootMargin: '300px' });
+  cards.forEach((c, i) => vids[i] && near.observe(c));
+  const start = v => { if (v && !reduce) { if (!v.src) v.src = v.dataset.src; const p = v.play(); if (p) p.catch(() => {}); } };
   const stop = v => { if (v && !v.paused) v.pause(); };
-  if (!touch) cards.forEach((c, i) => {
+  vids.forEach(v => v && v.addEventListener('playing', () => v.classList.add('on')));
+  cards.forEach((c, i) => {
+    if (!vids[i]) return;
     c.addEventListener('pointerenter', () => start(vids[i]));
-    c.addEventListener('pointerleave', () => stop(vids[i]));
+    c.addEventListener('pointerleave', () => { stop(vids[i]); vids[i].classList.remove('on'); });
   });
-  else { // phones: only the card that is most in view plays
-    const ratio = new Map();
-    const pick = new IntersectionObserver(es => {
-      es.forEach(e => ratio.set(e.target, e.intersectionRatio));
-      let best = null, r = .55;
-      ratio.forEach((v, c) => { if (v > r) { r = v; best = c; } });
-      cards.forEach((c, i) => c === best ? start(vids[i]) : stop(vids[i]));
-    }, { threshold: [0, .3, .55, .8, 1] });
-    cards.forEach((c, i) => vids[i] && pick.observe(c));
-  }
 
   // the «Смотреть» label follows the pointer inside the card, the card tilts a little toward it
   if (!touch && !reduce) cards.forEach(c => {
@@ -534,9 +532,10 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
   const visible = () => cards.filter(c => !c.hidden).map(c => +c.dataset.i);
   function fill(i) {
     const w = list[i]; cur = i;
-    media.innerHTML = w.video
-      ? `<video controls autoplay playsinline src="${esc(w.video)}"${w.poster ? ` poster="${esc(w.poster)}"` : ''}></video>`
-      : `${w.poster ? `<img src="${esc(w.poster)}" alt="">` : art(w, i)}<a class="wv-tg btn primary" href="${esc(w.post)}" target="_blank" rel="noopener">${play}<span>Смотреть видео в Telegram</span></a>`;
+    media.innerHTML = w.clips.length
+      ? `<video controls autoplay playsinline preload="auto"></video>${w.clips.length > 1 ? `<div class="wv-clips" role="tablist" aria-label="Ролики">${w.clips.map((_, k) => `<button type="button" role="tab" data-k="${k}">${esc((w.parts || [])[k] || 'Ролик ' + (k + 1))}</button>`).join('')}</div>` : ''}`
+      : `${w.posters[0] ? `<img src="${esc(w.posters[0])}" alt="">` : art(w, i)}<a class="wv-tg btn primary" href="${esc(w.post)}" target="_blank" rel="noopener">${play}<span>Смотреть видео в Telegram</span></a>`;
+    if (w.clips.length) clip(0);
     $('#wvKind').textContent = `${num(i)} · ${w.kind || ''}${w.time ? ' · ' + w.time : ''}`;
     $('#wvTitle').textContent = w.title;
     $('#wvText').textContent = w.text || '';
@@ -549,6 +548,16 @@ if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100
     const vis = visible();
     $('#wvNum').textContent = `${vis.indexOf(i) + 1} / ${vis.length}`;
   }
+  // one of the work's clips into the viewer's player; the next one starts when it ends
+  function clip(k) {
+    const w = list[cur], v = $('video', media); if (!v) return;
+    v.poster = w.posters[k] || w.posters[0] || ''; v.src = w.clips[k]; v.dataset.k = k;
+    const p = v.play(); if (p) p.catch(() => {});
+    $$('.wv-clips button', media).forEach(b => b.setAttribute('aria-selected', +b.dataset.k === k));
+  }
+  media.addEventListener('click', e => { const b = e.target.closest('.wv-clips button'); if (b) clip(+b.dataset.k); });
+  media.addEventListener('ended', e => { const w = list[cur], k = +e.target.dataset.k; if (w.clips.length > 1) clip((k + 1) % w.clips.length); }, true);
+
   // clip-path inset that matches a rectangle on the screen, relative to the viewer box
   const insetOf = r => {
     const b = box.getBoundingClientRect(), c = v => Math.max(0, v).toFixed(1) + 'px';
