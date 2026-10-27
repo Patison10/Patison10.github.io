@@ -1,0 +1,12 @@
+{
+  "name": "barbershop-ai-bot-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "test": "node --test test/logic.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
