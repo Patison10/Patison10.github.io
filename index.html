@@ -1,15 +1,15 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Максим (Patson) — лендинг, который продаёт</title>
-<meta name="description" content="Делаю лендинги под ключ для малого бизнеса: от 7 000 ₽, от 3 дней, правки без лимита. Также Telegram-боты и ИИ-автоматизация.">
+<meta name="description" content="Веб-дизайн формирует 94% первых впечатлений о бренде. На оценку сайта у пользователя уходит 0,05 секунды. Делаю лендинги под ключ от 7 000 ₽, от 3 дней.">
 <meta name="theme-color" content="#050505">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:title" content="Максим (Patson) — лендинг, который продаёт">
-<meta property="og:description" content="Лендинги под ключ от 7 000 ₽, от 3 дней. Также Telegram-боты и ИИ-автоматизация для бизнеса.">
+<meta property="og:description" content="Лендинги под ключ от 7 000 ₽, от 3 дней. Дизайн, анимации, адаптив, заявки в Telegram.">
 <meta property="og:site_name" content="Patson">
 <meta property="og:url" content="https://patison10.github.io/">
 <meta property="og:image" content="https://patison10.github.io/og.png">
@@ -20,72 +20,119 @@
 <link rel="canonical" href="https://patison10.github.io/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23ff1f2d'/%3E%3C/svg%3E">
 <script>document.documentElement.classList.add('js')</script>
-<link rel="preload" href="fonts/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="preload" href="fonts/unbounded-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/geologica-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="progress" id="progress"></div>
 <div class="cursor" id="cursor" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="ambient" aria-hidden="true"><b></b><b></b><b></b></div>
 
 <header class="nav" id="nav">
   <a href="#hero" class="logo"><i></i>Patson</a>
   <nav>
     <i class="nav-ind" id="navInd" aria-hidden="true"></i>
+    <a href="#problem">Зачем</a>
     <a href="#portfolio">Работы</a>
+    <a href="#included">Что входит</a>
     <a href="#pricing">Цены</a>
-    <a href="#process">Как заказать</a>
-    <a href="#faq">Вопросы</a>
+    <a href="#faq">FAQ</a>
   </nav>
-  <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="nav-cta">Заказать</a>
+  <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="nav-cta" data-magnetic>Заказать</a>
 </header>
 
 <main>
   <!-- HERO -->
   <section id="hero" class="hero">
+    <canvas id="ascii" aria-hidden="true"></canvas>
+    <canvas id="grid" aria-hidden="true"></canvas>
+    <div class="glow" id="glow" aria-hidden="true"></div>
+
+    <div class="stage" aria-hidden="true">
+      <div class="fl f-time" data-depth="38"><small>ВЕРДИКТ ЗА</small><b>0,05 с</b></div>
+      <div class="fl f-mock" data-depth="14">
+        <div class="m-bar"><i></i><i></i><i></i><span>yoursite.ru</span></div>
+        <div class="m-body">
+          <u class="m-h"></u><u class="m-l"></u><u class="m-l s"></u>
+          <div class="m-cta">Оставить заявку</div>
+          <div class="m-row"><u></u><u></u><u></u></div>
+        </div>
+      </div>
+      <div class="fl f-ring" data-depth="26">
+        <svg viewBox="0 0 80 80"><circle class="rt" cx="40" cy="40" r="34"/><circle class="rv" cx="40" cy="40" r="34"/></svg>
+        <div><b>94%</b><span>первых впечатлений формирует веб-дизайн</span></div>
+      </div>
+      <div class="fl f-toast" data-depth="20"><i class="tg"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.6c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.6 13.4l-4.7-1.5c-1-.3-1-1 .2-1.5L20.4 3.3c.9-.3 1.6.2 1.5 1Z"/></svg></i><div><b>Новая заявка</b><span>с вашего лендинга · сейчас</span></div></div>
+    </div>
+
     <div class="hero-inner">
-      <div class="badge"><i></i>Я Максим, делаю лендинги · принимаю заказы</div>
+      <div class="badge"><i></i>Привет, я Максим — принимаю заказы</div>
       <h1 class="title">
         <span class="ln"><span class="in">Лендинг,</span></span>
-        <span class="ln"><span class="in">который <em class="hot">продаёт</em></span></span>
+        <span class="ln"><span class="in">который <em class="hot" data-text="продаёт">продаёт</em></span></span>
       </h1>
-      <p class="tagline">Делаю <b>одностраничные сайты для малого бизнеса</b> под ключ: дизайн, тексты, адаптив и заявки прямо в Telegram. Вы рассказываете о своём деле, через <b>3–7 дней</b> получаете готовый сайт.</p>
-      <p class="also">Также делаю <a href="#more">Telegram-ботов и ИИ-автоматизацию</a> для бизнеса</p>
+      <p class="typer" aria-hidden="true"><span class="ty-p">&gt;</span> Максим делает <b id="typed">лендинг</b><i class="ty-c"></i></p>
+      <p class="sr-only">Максим делает лендинги, Telegram-ботов, парсеры, интернет-магазины, админ-панели и автоматизацию.</p>
+      <p class="tagline">Веб-дизайн формирует <b>94% первых впечатлений</b> о бренде. На оценку внешнего вида сайта у пользователя уходит всего <b>0,05 секунды</b> (50 миллисекунд). Если визуальное оформление отталкивает или кажется устаревшим, человек мгновенно уходит.</p>
       <div class="actions">
-        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn primary"><span>Заказать на Kwork</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn ghost"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.6 19.6c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.6 13.4l-4.7-1.5c-1-.3-1-1 .2-1.5L20.4 3.3c.9-.3 1.6.2 1.5 1Z"/></svg><span>Написать в Telegram</span></a>
+        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn primary" data-magnetic><span>Заказать на Kwork</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="https://t.me/letpatsonwork" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Telegram-канал</span></a>
+        <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Написать Максиму</span></a>
       </div>
-      <p class="micro"><svg class="ic ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10.5" rx="3"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><path d="M12 14.6v2.2"/></svg> Безопасная сделка через Kwork — деньги вернутся, если что-то пойдёт не так</p>
+      <p class="micro"><svg class="ic ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10.5" rx="3"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><path d="M12 14.6v2.2"/></svg> Безопасная сделка через Kwork — деньги вернутся, если что-то пойдёт не так<br>Не открывается Kwork? <a class="fallback" href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Напишите в Telegram <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
       <ul class="trust">
         <li><b>от 3</b> дней до запуска</li>
         <li><b><svg class="ic ic-inf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12c-1.9-2.6-3.5-3.9-5.2-3.9a3.9 3.9 0 0 0 0 7.8c1.7 0 3.3-1.3 5.2-3.9Zm0 0c1.9 2.6 3.5 3.9 5.2 3.9a3.9 3.9 0 0 0 0-7.8c-1.7 0-3.3 1.3-5.2 3.9Z"/></svg></b> правок до результата</li>
         <li><b>от 7 000 ₽</b> под ключ</li>
       </ul>
     </div>
-    <a href="#portfolio" class="hero-works">
-      <span class="hw-shots" aria-hidden="true"><img src="works/sora.jpg" alt=""><img src="works/aegea.jpg" alt=""><img src="works/garage47.jpg" alt=""></span>
-      <span class="hw-txt"><small>ПОРТФОЛИО · <b id="hwCount">9</b> работ</small><strong>Смотреть мои работы</strong><span>Кофейня, отель, автосервис, барбершоп и другие</span></span>
-      <i class="hw-go" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></i>
-    </a>
   </section>
 
-  <!-- PORTFOLIO -->
-  <section id="portfolio" class="portfolio">
-    <p class="label reveal"><span>01</span> РАБОТЫ</p>
-    <div class="wk-head">
-      <h2 class="h2 reveal">Мои <span class="red">работы</span></h2>
-      <div class="wk-side reveal">
-        <p class="wk-count"><b id="wkCount">0</b><span>работ<br>в портфолио</span></p>
-        <div class="wk-filters" id="wkFilters" role="tablist" aria-label="Тип работы"></div>
-      </div>
+  <!-- MARQUEE -->
+  <div class="marquee" aria-hidden="true">
+    <div class="track"><span>ДИЗАЙН <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> КОД <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АНИМАЦИИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> РЕЗУЛЬТАТ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span><span>ДИЗАЙН <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> КОД <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АНИМАЦИИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> РЕЗУЛЬТАТ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span><span>ДИЗАЙН <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> КОД <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АНИМАЦИИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> РЕЗУЛЬТАТ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span></div>
+  </div>
+  <div class="marquee m2" aria-hidden="true">
+    <div class="track"><span>ЛЕНДИНГИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> МАГАЗИНЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> БОТЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АВТОМАТИЗАЦИЯ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span><span>ЛЕНДИНГИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> МАГАЗИНЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> БОТЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АВТОМАТИЗАЦИЯ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span><span>ЛЕНДИНГИ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> МАГАЗИНЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> БОТЫ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> АВТОМАТИЗАЦИЯ <svg class="ic ic-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.7 5.6 3.1 8.9 10.5 10.5-7.4 1.6-9.8 4.9-10.5 10.5-.7-5.6-3.1-8.9-10.5-10.5C8.9 10.4 11.3 7.1 12 1.5Z"/></svg> </span></div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section id="problem" class="problem">
+    <p class="label reveal" data-scramble><span>01</span> ПРОБЛЕМА</p>
+    <div class="split"><div>
+    <h2 class="h2 reveal">Унылый сайт молча <span class="red">теряет клиентов</span></h2>
+    <p class="scrub" id="scrub">Каждая секунда на сайте стоит денег. Пока вы выбираете оттенок кнопки, клиент уже ушёл к тому, у кого страница выглядит дороже. Меня зовут Максим, и моя задача проще некуда: чтобы человек остался на вашем сайте — и оставил заявку.</p>
     </div>
-    <div class="wk-grid" id="wkGrid"></div>
-    <p class="sub reveal">Нажмите на работу, чтобы посмотреть видео. Новые проекты выкладываю в <a class="fallback" href="https://t.me/letpatsonwork" target="_blank" rel="noopener">Telegram-канал @letpatsonwork</a>.</p>
+    <aside class="timer reveal">
+      <div class="eyewrap">
+        <svg class="eye-svg" viewBox="0 0 240 150" aria-hidden="true">
+          <defs><clipPath id="eyeclip"><path d="M14 75 Q120 -10 226 75 Q120 160 14 75Z"/></clipPath></defs>
+          <g class="eye">
+            <path class="sclera" d="M14 75 Q120 -10 226 75 Q120 160 14 75Z"/>
+            <g clip-path="url(#eyeclip)">
+              <g class="iris"><circle class="ir" cx="120" cy="75" r="34"/></g>
+            </g>
+          </g>
+        </svg>
+        <div class="tn"><b>50</b><span>мс</span></div>
+      </div>
+      <p>Столько у посетителя уходит, чтобы решить: нравится ему ваш сайт или нет.</p>
+    </aside></div>
+    <div class="swap">
+      <div class="row reveal"><p class="bad">Человек уходит за секунды</p><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i><p class="good">Первый экран цепляет и за секунду объясняет, чем вы лучше</p></div>
+      <div class="row reveal"><p class="bad">Сайт выглядит как у всех</p><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i><p class="good">Дизайн, который запоминается — клиент видит вас, а не «как у всех»</p></div>
+      <div class="row reveal"><p class="bad">На телефоне всё ломается</p><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i><p class="good">Идеально на телефоне, планшете и компьютере — клиент не теряется</p></div>
+      <div class="row reveal"><p class="bad">Непонятно, куда нажимать</p><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i><p class="good">Заявка в один клик: форма, Telegram, WhatsApp — клиент пишет вам сразу</p></div>
+    </div>
   </section>
 
   <!-- SERVICES -->
   <section id="services" class="services">
-    <p class="label reveal"><span>02</span> ЧТО ВЫ ПОЛУЧИТЕ</p>
-    <h2 class="h2 reveal">Сайт, который <span class="red">приводит заявки</span></h2>
+    <div class="giant" aria-hidden="true"><span id="giant">SELL · SELL · SELL · SELL</span></div>
+    <p class="label reveal" data-scramble><span>02</span> ЧТО Я ДЕЛАЮ</p>
+    <h2 class="h2 reveal">Сайты, которые <span class="red">работают на вас</span></h2>
     <div class="bento">
       <article class="card c1 reveal spot">
         <div class="viz browser">
@@ -93,7 +140,7 @@
           <div class="page"><u class="hd"></u><u></u><u class="s"></u><div class="chips"><u></u><u></u><u></u></div></div>
         </div>
         <em>Fig. 01</em><h3>Лендинг под ключ</h3>
-        <p>Вы отдаёте задачу — получаете готовый сайт, который ясно объясняет ваше предложение. Публикую на хостинге и помогаю с доменом.</p>
+        <p>Вы отдаёте задачу — получаете готовый сайт, который ясно объясняет ваше предложение и приводит заявки. Опубликую на хостинге и помогу с доменом.</p>
       </article>
       <article class="card c2 reveal spot">
         <div class="viz swatches"><i></i><i></i><i></i><i></i><b>Aa</b></div>
@@ -103,7 +150,7 @@
       <article class="card c3 reveal spot">
         <div class="viz devices"><i class="d"></i><i class="t"></i><i class="p"></i></div>
         <em>Fig. 03</em><h3>Адаптив</h3>
-        <p>Большинство клиентов заходят с телефона, поэтому сайт удобен и там, и на компьютере.</p>
+        <p>Большинство людей заходят с телефона — и там всё выглядит безупречно.</p>
       </article>
       <article class="card c4 reveal spot">
         <div class="viz motion"><div class="rail"><i></i></div><div class="eq"><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></div></div>
@@ -111,61 +158,104 @@
         <p>Клиент нажал — вы получили заявку в Telegram или на почту. Кнопки связи через WhatsApp и Telegram всегда под рукой.</p>
       </article>
     </div>
-    <div class="more reveal" id="more">
-      <div class="more-head">
-        <h3>Не только сайты</h3>
-        <p>Основное — лендинги, но я также делаю ботов и автоматизирую рутину. Сайт и бот хорошо работают в связке: например, в проекте Aquatic ИИ-бот принимает заявки вместо менеджера.</p>
-        <a class="btn ghost" href="https://t.me/Patisonooochik?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5%2C%20%D0%9C%D0%B0%D0%BA%D1%81%D0%B8%D0%BC!%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%BE%D0%B1%D1%81%D1%83%D0%B4%D0%B8%D1%82%D1%8C%20%D0%B1%D0%BE%D1%82%D0%B0%20%D0%B8%D0%BB%D0%B8%20%D0%B0%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D1%82%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8E." target="_blank" rel="noopener"><span>Обсудить задачу в Telegram</span></a>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section id="portfolio" class="portfolio">
+    <p class="label reveal" data-scramble><span>03</span> ПОРТФОЛИО</p>
+    <div class="wk-head">
+      <h2 class="h2 reveal">Посмотри мои <span class="red">работы</span></h2>
+      <div class="wk-side reveal">
+        <p class="wk-count"><b id="wkCount">0</b><span>работ<br>в портфолио</span></p>
+        <div class="wk-filters" id="wkFilters" role="tablist" aria-label="Тип работы"></div>
       </div>
-      <ul class="more-list">
-        <li><b>Telegram-боты</b><span>Заявки, запись и уведомления прямо в Telegram</span></li>
-        <li><b>ИИ-интеграции</b><span>Бот-менеджер, который отвечает клиентам и собирает заявки</span></li>
-        <li><b>Админ-панели</b><span>Удобное управление заказами и контентом</span></li>
-        <li><b>Автопостинг</b><span>Публикации в Telegram, Instagram и VK по расписанию</span></li>
-        <li><b>Аналитика и CRM</b><span>Отчёты и передача заявок в CRM без ручной работы</span></li>
-      </ul>
     </div>
+    <div class="wk-grid" id="wkGrid"></div>
+    <p class="sub reveal">Ещё больше работ и разборов — на Kwork и в моём Telegram-канале.</p>
+    <div class="pf-grid">
+      <a class="pf reveal spot" href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" data-magnetic>
+        <span class="pf-ico">K</span>
+        <div><small>KWORK</small><strong>Портфолио на кворке</strong><span>Примеры работ, условия и тарифы — на странице моего кворка.</span></div><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i>
+      </a>
+      <a class="pf reveal spot" href="https://t.me/letpatsonwork" target="_blank" rel="noopener" data-magnetic>
+        <span class="pf-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.6c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.6 13.4l-4.7-1.5c-1-.3-1-1 .2-1.5L20.4 3.3c.9-.3 1.6.2 1.5 1Z"/></svg></span>
+        <div><small>TELEGRAM-КАНАЛ</small><strong>Работы в моём канале</strong><span>Новые проекты и работы — подпишись, чтобы ничего не пропустить.</span></div><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i>
+      </a>
+    </div>
+  </section>
+
+  <!-- INCLUDED -->
+  <section id="included" class="included">
+    <p class="label reveal" data-scramble><span>04</span> ЧТО ВХОДИТ</p>
+    <h2 class="h2 reveal">До 7 блоков — <span class="red">всё, что нужно</span></h2>
+    <div class="inc-grid">
+      <ol class="blocks reveal">
+        <li><b>01</b>Первый экран</li>
+        <li><b>02</b>Услуги</li>
+        <li><b>03</b>Преимущества</li>
+        <li><b>04</b>Цены</li>
+        <li><b>05</b>Отзывы</li>
+        <li><b>06</b>Вопросы и ответы</li>
+        <li><b>07</b>Контакты</li>
+      </ol>
+      <div class="inc-side reveal">
+        <h3>Кому подойдёт</h3>
+        <p class="chips2"><span>Школы</span><span>Мастера</span><span>Салоны</span><span>Кафе</span><span>Ремонт</span><span>Репетиторы</span><span>Малый бизнес</span></p>
+        <h3>Что нужно от вас</h3>
+        <p class="need">Название и чем вы занимаетесь, контакты, логотип и фото (если есть), примеры сайтов, которые нравятся. Нет текстов — помогу составить.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section id="process" class="process">
+    <p class="label reveal" data-scramble><span>05</span> КАК ЭТО РАБОТАЕТ</p>
+    <h2 class="h2 reveal">Три шага до <span class="red">запуска</span></h2>
+    <ol class="steps">
+      <li class="step reveal"><b>01</b><h3>Бриф</h3><p>Вы рассказываете о бизнесе — я превращаю это в понятную структуру и сильные тексты.</p></li>
+      <li class="step reveal"><b>02</b><h3>Дизайн и код</h3><p>Рисую, анимирую и собираю страницу. Правки без лимита — пока вы не скажете «вау».</p></li>
+      <li class="step reveal"><b>03</b><h3>Запуск</h3><p>Публикую, подключаю домен и передаю готовый сайт. Можно сразу пускать рекламу.</p></li>
+    </ol>
   </section>
 
   <!-- PRICING -->
   <section id="pricing" class="pricing">
-    <p class="label reveal"><span>03</span> ЦЕНЫ</p>
+    <p class="label reveal" data-scramble><span>06</span> ЦЕНЫ</p>
     <h2 class="h2 reveal">Понятная цена, <span class="red">без сюрпризов</span></h2>
     <div class="plans">
       <article class="plan reveal spot">
         <h3>Эконом</h3>
-        <p class="for">Если сайт нужен быстро, а свой домен пока не важен.</p>
+        <p class="for">Быстрый старт: простой лендинг, чтобы уже на этой неделе принимать заявки.</p>
         <div class="price">7 000 ₽</div>
         <div class="days">3 дня</div>
-        <ul><li>До 7 блоков: первый экран, услуги, преимущества, цены, отзывы, вопросы, контакты</li><li>Адаптив под телефон</li><li>Установка на хостинг</li><li>Правки без ограничений</li></ul>
-        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost"><span>Заказать</span></a>
+        <ul><li>Адаптивный сайт</li><li>Установка на хостинг</li><li>До 7 блоков</li><li>Правки без ограничений</li></ul>
+        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Заказать</span></a>
       </article>
       <article class="plan hit reveal spot">
         <span class="tag">Выбирают чаще</span>
         <h3>Стандарт</h3>
-        <p class="for">Подойдёт большинству: свой домен, форма заявки и видимость в поиске.</p>
+        <p class="for">Лучший баланс: продающий лендинг с формой заявки, SEO и доменом.</p>
         <div class="price">10 000 ₽</div>
         <div class="days">5 дней</div>
         <ul><li>Всё из «Эконом»</li><li>Доменное имя</li><li>SEO-оптимизация сайта</li><li>Форма обратной связи</li><li>Подбор картинок</li></ul>
-        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn primary"><span>Заказать</span></a>
+        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn primary" data-magnetic><span>Заказать</span></a>
       </article>
       <article class="plan reveal spot">
         <h3>Бизнес</h3>
-        <p class="for">Если некогда заниматься сайтом: тексты, приём заказов и аналитика — на мне.</p>
+        <p class="for">Максимум без хлопот: тексты, дизайн, домен и запуск. Вы только принимаете клиентов.</p>
         <div class="price">13 000 ₽</div>
         <div class="days">7 дней</div>
         <ul><li>Всё из «Стандарт»</li><li>Форма заказа</li><li>Онлайн-консультант</li><li>Наполнение контентом</li><li>Подключение Яндекс Метрики</li></ul>
-        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost"><span>Заказать</span></a>
+        <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Заказать</span></a>
       </article>
     </div>
     <article class="custom reveal" id="custom">
       <div class="cu-head">
-        <span class="tag">Свой вариант</span>
-        <h3>Не подошёл ни один тариф?</h3>
-        <p>Соберите набор сами: стиль, количество блоков и нужные опции. Стоимость посчитается сразу.</p>
-        <button type="button" class="btn ghost cu-open" id="cuOpen" aria-expanded="false" aria-controls="cuGrid"><span>Собрать свой вариант</span></button>
+        <span class="tag">Собери сам</span>
+        <h3>Ваш вкус</h3>
+        <p>Полностью авторский лендинг под ваши пожелания. Выберите стиль, количество блоков и нужные опции кнопками «+» и «−»: стоимость посчитается сразу.</p>
       </div>
-      <div class="cu-grid" id="cuGrid" hidden>
+      <div class="cu-grid">
         <div class="cu-form">
           <div class="cu-group"><h4>Стиль</h4><div class="cu-styles" id="cuStyles"></div></div>
           <div class="cu-group"><h4>Блоки</h4><div id="cuBlocks"></div></div>
@@ -181,60 +271,52 @@
           <span class="cu-days" id="cuDays"></span>
           <ul class="cu-list" id="cuList"></ul>
           <p class="cu-advice" id="cuAdvice"></p>
-          <p class="cu-hint">Итог ориентировочный: точную сумму и срок подтвержу после обсуждения.</p>
-          <a href="#" id="cuKwork" target="_blank" rel="noopener" class="btn ghost"><span>Заказать на Kwork</span></a>
-          <a href="#" id="cuTg" target="_blank" rel="noopener" class="btn primary"><span>Написать в Telegram</span></a>
+          <a href="#" id="cuKwork" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Заказать на Kwork</span></a>
+          <a href="#" id="cuTg" target="_blank" rel="noopener" class="btn primary" data-magnetic><span>Написать в Telegram</span></a>
           <small class="cu-copied" id="cuCopied" hidden>Состав заказа скопирован: вставьте его в чат</small>
         </aside>
       </div>
     </article>
-    <p class="note reveal">Домен и хостинг оплачиваются отдельно. Заказ идёт через Kwork: безопасная сделка и возврат денег, если что-то пойдёт не так. Не открывается Kwork? <a class="fallback" href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Напишите мне в Telegram</a>, подскажу, как оформить заказ.</p>
+    <p class="note reveal">Цены доп. опций: блоки и Telegram-бот — по кворку, остальные опции входят в пакеты «Стандарт» и «Бизнес» (разница между пакетами поровну). Итог ориентировочный, точную сумму и сроки подтверждаю после обсуждения.</p>
+    <p class="note reveal">Оплата домена и хостинга — отдельно, её вносит заказчик. Заказ идёт через Kwork: безопасная сделка и гарантия возврата средств, если что-то пойдёт не так. Не открывается Kwork? <a class="fallback" href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Напишите мне в Telegram</a>, подскажу, как оформить заказ.</p>
   </section>
 
-  <!-- PROCESS -->
-  <section id="process" class="process">
-    <p class="label reveal"><span>04</span> КАК ЗАКАЗАТЬ</p>
-    <h2 class="h2 reveal">Три шага до <span class="red">запуска</span></h2>
-    <ol class="steps">
-      <li class="step reveal"><b>01</b><h3>Заказ</h3><p>Выберите тариф и оформите его на Kwork. Хотите сначала обсудить — напишите в Telegram, помогу выбрать. От вас: название, чем занимаетесь, контакты, логотип и фото (если есть). Нет текстов — составлю сам.</p></li>
-      <li class="step reveal"><b>02</b><h3>Дизайн и код</h3><p>Собираю структуру, тексты и дизайн страницы. Показываю результат и вношу правки без лимита, пока вам не понравится.</p></li>
-      <li class="step reveal"><b>03</b><h3>Запуск</h3><p>Публикую сайт, подключаю домен и передаю его вам. Можно сразу принимать заявки и запускать рекламу.</p></li>
-    </ol>
-    <div class="fit reveal">
-      <h3>Кому подойдёт</h3>
-      <p class="chips2"><span>Школы</span><span>Мастера</span><span>Салоны</span><span>Кафе</span><span>Ремонт</span><span>Репетиторы</span><span>Малый бизнес</span></p>
-    </div>
+  <!-- TELEGRAM CHANNEL -->
+  <section class="channel">
+    <a href="https://t.me/letpatsonwork" target="_blank" rel="noopener" class="chan reveal" data-magnetic>
+      <span class="chan-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.6c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.3-.1-.5-.6-.2L6.6 13.4l-4.7-1.5c-1-.3-1-1 .2-1.5L20.4 3.3c.9-.3 1.6.2 1.5 1Z"/></svg></span>
+      <span class="chan-txt"><small>TELEGRAM-КАНАЛ</small><strong>Портфолио и новые работы — в моём канале</strong></span>
+      <span class="chan-go">@letpatsonwork <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
   </section>
 
   <!-- FAQ -->
   <section id="faq" class="faq">
-    <p class="label reveal"><span>05</span> ВОПРОСЫ</p>
+    <p class="label reveal" data-scramble><span>07</span> ВОПРОСЫ</p>
     <h2 class="h2 reveal">Частые <span class="red">вопросы</span></h2>
     <div class="split faqs">
     <div class="qa reveal">
-      <details><summary>Как заказать и оплатить?</summary><p>Выберите тариф и оформите его на Kwork: деньги хранятся на площадке, пока работа не готова. Если удобнее сначала обсудить задачу — напишите мне в Telegram.</p></details>
       <details><summary>Можно ли переделать действующий сайт?</summary><p>Напишите мне и опишите, что нужно изменить — обсудим объём работы и стоимость.</p></details>
       <details><summary>Подключаю домен и оплачиваю хостинг я?</summary><p>Да, оплата домена, тарифов и облака — на стороне заказчика. Я публикую сайт на хостинге и помогаю подключить домен.</p></details>
       <details><summary>Могу ли я вносить правки в дизайне?</summary><p>Да. Количество правок не ограничено — вношу их до запуска, пока вам не понравится результат.</p></details>
-      <details><summary>Вы делаете только сайты?</summary><p>Основное направление — лендинги, но я также делаю Telegram-ботов, ИИ-интеграции, админ-панели, автопостинг и связку с CRM. Опишите задачу в Telegram — оценю сроки и стоимость.</p></details>
       <details><summary>Хочу то, чего нет в списке пакетов — сделаете?</summary><p>Напишите, что именно нужно: оценю задачу и предложу вариант как дополнительную услугу.</p></details>
       <details><summary>У меня нет текстов и фото</summary><p>Помогу составить тексты и подобрать картинки. В тарифе «Бизнес» наполнение контентом уже включено.</p></details>
     </div>
     <aside class="ask reveal">
       <h3>Остались <span class="red">вопросы?</span></h3>
-      <p>Напишите мне — отвечу и подскажу, какой тариф подойдёт именно вам.</p>
-      <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn primary"><span>Написать в Telegram</span></a>
-      <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost"><span>Открыть кворк</span></a>
+      <p>Напишите Максиму — отвечу и подскажу, какой тариф подойдёт именно вам.</p>
+      <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn primary" data-magnetic><span>Написать в Telegram</span></a>
+      <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Открыть кворк</span></a>
     </aside></div>
   </section>
 
   <!-- CTA -->
   <section id="contacts" class="contacts">
     <div class="glow2" aria-hidden="true"></div>
-    <p class="label reveal"><span>06</span> КОНТАКТЫ</p>
+    <p class="label reveal" data-scramble><span>08</span> КОНТАКТЫ</p>
     <div class="split cs"><div>
-    <h2 class="big reveal">Давайте сделаем <span class="red">ваш сайт</span></h2>
-    <p class="sub reveal">Оформите заказ на Kwork или напишите мне в Telegram — через 3–7 дней у вас будет сайт, который приводит заявки.</p>
+    <h2 class="big reveal">Давай сделаем<br><span class="red">твой сайт</span></h2>
+    <p class="sub reveal">Каждый день без нормального сайта — это клиенты, которые уходят к другим. Оформи заказ на Kwork или напиши мне, Максиму, в Telegram — и через 3–7 дней у тебя будет лендинг, который работает.</p>
     </div>
     <aside class="me reveal spot">
       <div class="me-top"><div class="av">М</div><div><b>Максим</b><span>веб-разработчик · Patson</span></div></div>
@@ -242,15 +324,15 @@
       <ul><li><small>СРОК</small>от 3 дней</li><li><small>ЦЕНА</small>от 7 000 ₽</li><li><small>ПРАВКИ</small>без лимита</li></ul>
     </aside></div>
     <div class="ctas">
-      <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="cta main reveal">
+      <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="cta main reveal" data-magnetic>
         <small>KWORK</small><strong>Заказать лендинг</strong>
         <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
       </a>
-      <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="cta reveal">
+      <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="cta reveal" data-magnetic>
         <small>TELEGRAM</small><strong>@Patisonooochik</strong>
         <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
       </a>
-      <a href="https://t.me/letpatsonwork" target="_blank" rel="noopener" class="cta reveal">
+      <a href="https://t.me/letpatsonwork" target="_blank" rel="noopener" class="cta reveal" data-magnetic>
         <small>КАНАЛ</small><strong>@letpatsonwork</strong>
         <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
       </a>
@@ -277,7 +359,7 @@
   </div>
 </div>
 
-<script src="works.js?v=23"></script>
-<script src="script.js?v=23"></script>
+<script src="works.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

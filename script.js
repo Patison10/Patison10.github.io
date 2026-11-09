@@ -5,6 +5,439 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const mouse = { x: innerWidth * .6, y: innerHeight * .45, moved: false };
 addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true; });
 
+/* ---------- hero: halftone wordmark ---------- */
+// A giant word, cropped by the hero's bottom edge, printed as a field of dots. Each dot is sized by how much of the
+// letter covers its cell (area-true), so the type keeps its edges at any scale. The dots part around the pointer on
+// springs and warm toward red as they are pushed off their place; a click sends a shock ring through the word.
+// Kept cheap on purpose: the canvas covers only the band under the word, the dots are drawn on the GPU (WebGL points,
+// one draw call) with a Canvas 2D fallback, the pointer is handled once per frame, and nothing runs unless the pointer
+// is near the word or dots are still moving. The band is always repainted as a whole (partial repaints left seams).
+let cv = $('#grid'), ctx = null, gl = null, glLost = false;
+const hero = $('#hero');
+const lite = touch || innerWidth < 900;
+const HW = {
+  word: 'patson', face: '"Unbounded","Geologica","Helvetica Neue",Arial,sans-serif', weight: 800,
+  gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .08, margin: lite ? 40 : 70, fill: lite ? .94 : .9,
+  ink: [196, 196, 196], warm: [255, 31, 45]
+};
+const LK = 9; // warmth levels (Canvas 2D fallback)
+let W = 0, H = 0, heroH = 0, dpr = 1, rmax = 0, warmCols = [], dots = new Float32Array(0), vbo = new Float32Array(0), count = 0;
+let px = -1e5, py = -1e5, lastMove = 0, ring = { x: 0, y: 0, t: -1 };
+let raf = 0, visible = true, awake = true, cost = 0, skip = false, tick = 0;
+
+// ---- GPU renderer: every dot is one point; the fragment shader draws the anti-aliased disc ----
+const VS = `attribute vec2 a_pos; attribute float a_rad; attribute float a_k;
+uniform vec2 u_res; uniform float u_dpr; varying float v_k; varying float v_r; varying float v_s;
+void main() {
+  gl_Position = vec4(a_pos.x / u_res.x * 2.0 - 1.0, 1.0 - a_pos.y / u_res.y * 2.0, 0.0, 1.0);
+  float s = (a_rad * 2.0 + 2.0) * u_dpr;
+  gl_PointSize = s; v_s = s; v_r = a_rad * u_dpr; v_k = a_k;
+}`;
+const FS = `precision mediump float; uniform vec3 u_ink; uniform vec3 u_warm; varying float v_k; varying float v_r; varying float v_s;
+void main() {
+  float d = length(gl_PointCoord - vec2(0.5)) * v_s;
+  float a = clamp(v_r - d + 0.5, 0.0, 1.0);
+  gl_FragColor = vec4(mix(u_ink, u_warm, v_k) * a, a);
+}`;
+let glu = null;
+function initGL() {
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; };
+  const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+  if (!vs || !fs) return false;
+  const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  [['a_pos', 2, 0], ['a_rad', 1, 8], ['a_k', 1, 12]].forEach(([n, size, off]) => {
+    const l = gl.getAttribLocation(prog, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 16, off);
+  });
+  glu = { res: gl.getUniformLocation(prog, 'u_res'), dpr: gl.getUniformLocation(prog, 'u_dpr') };
+  gl.uniform3f(gl.getUniformLocation(prog, 'u_ink'), HW.ink[0] / 255, HW.ink[1] / 255, HW.ink[2] / 255);
+  gl.uniform3f(gl.getUniformLocation(prog, 'u_warm'), HW.warm[0] / 255, HW.warm[1] / 255, HW.warm[2] / 255);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0, 0, 0, 0);
+  return true;
+}
+function useCanvas2D() { // WebGL missing or broken: a canvas can never switch context type, so use a fresh one
+  if (gl) { const fresh = cv.cloneNode(false); cv.replaceWith(fresh); cv = fresh; gl = null; }
+  ctx = cv.getContext('2d');
+}
+if (!/[?&]gl=0\b/.test(location.search)) {
+  gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+  if (gl && !initGL()) useCanvas2D();
+  if (gl) {
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); glLost = true; });
+    cv.addEventListener('webglcontextrestored', () => { glLost = false; if (initGL()) { layout(); draw(performance.now()); } });
+  }
+}
+if (!gl) useCanvas2D();
+
+function layout() {
+  const m = document.createElement('canvas').getContext('2d');
+  W = Math.max(1, Math.round(hero.getBoundingClientRect().width));
+  m.font = `${HW.weight} 100px ${HW.face}`;
+  const probe = m.measureText(HW.word), measured = probe.width;
+  const capRatio = (probe.actualBoundingBoxAscent || 72) / 100; // letter height per 1px of font size
+  // The word fills most of the width, but it never gets taller than the room under the hero copy (on desktop about a fifth
+  // of the screen height) and it is only cropped a little: it has to stay readable, not just be a texture.
+  let size = measured > 0 ? W * HW.fill / measured * 100 : 100;
+  if (!lite) size = Math.min(size, Math.max(120, Math.min(220, innerHeight * .19)) / ((1 - HW.crop) * capRatio));
+  m.font = `${HW.weight} ${size}px ${HW.face}`;
+  const box = m.measureText(HW.word);
+  const cap = capRatio * size;
+
+  // the hero grows to leave room for the visible part of the word under the text; the canvas is only that band + a margin
+  const wordH = Math.round(cap * (1 - HW.crop));
+  hero.style.setProperty('--word-h', wordH + 'px');
+  heroH = Math.round(hero.getBoundingClientRect().height);
+  H = wordH + HW.margin;
+  cv.style.height = H + 'px';
+  dpr = Math.min(devicePixelRatio || 1, lite ? 1.5 : 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+
+  const mask = document.createElement('canvas'); mask.width = W; mask.height = H;
+  const mc = mask.getContext('2d', { willReadFrequently: true });
+  mc.font = `${HW.weight} ${size}px ${HW.face}`; mc.fillStyle = '#000'; mc.textBaseline = 'alphabetic';
+  mc.fillText(HW.word, (W - box.width) / 2, H + cap * HW.crop);
+  const img = mc.getImageData(0, 0, W, H).data;
+
+  const gap = HW.gap, cols = Math.ceil(W / gap), rows = Math.ceil(H / gap), tmp = [];
+  rmax = gap * .56;
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      let sum = 0; // coverage: average alpha over a 3x3 sample of the cell
+      for (let sy = 0; sy < 3; sy++) for (let sx = 0; sx < 3; sx++) {
+        const x = Math.min(W - 1, Math.floor(gx * gap + (sx + .5) * gap / 3));
+        const y = Math.min(H - 1, Math.floor(gy * gap + (sy + .5) * gap / 3));
+        sum += img[(y * W + x) * 4 + 3];
+      }
+      const cov = sum / (9 * 255);
+      if (cov < .06) continue;
+      const hx = gx * gap + gap / 2, hy = gy * gap + gap / 2;
+      tmp.push(hx, hy, 0, 0, hx, hy, Math.sqrt(cov) * rmax); // x y vx vy homeX homeY radius
+    }
+  }
+  dots = new Float32Array(tmp); count = tmp.length / 7;
+
+  if (gl) { // vertex buffer: x y radius warmth per dot
+    vbo = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) vbo[i * 4 + 2] = dots[i * 7 + 6];
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(glu.res, W, H); gl.uniform1f(glu.dpr, dpr);
+    gl.bufferData(gl.ARRAY_BUFFER, vbo, gl.DYNAMIC_DRAW);
+  } else { // one colour per warmth level (ink -> red); dots of the same level are filled together in a single path
+    warmCols = Array.from({ length: LK }, (_, k) => {
+      const t = k / (LK - 1);
+      return `rgb(${HW.ink.map((v, i) => Math.round(v + (HW.warm[i] - v) * t)).join(',')})`;
+    });
+  }
+  awake = true;
+}
+
+function paint() {
+  if (gl) {
+    if (glLost) return;
+    for (let i = 0; i < count; i++) {
+      const j = i * 7, o = i * 4, x = dots[j], y = dots[j + 1], ox = x - dots[j + 4], oy = y - dots[j + 5];
+      vbo[o] = x; vbo[o + 1] = y; vbo[o + 3] = ox || oy ? Math.min(1, Math.sqrt(ox * ox + oy * oy) / 28) : 0; // warmth: 0 at home
+    }
+    gl.clear(gl.COLOR_BUFFER_BIT); gl.bufferSubData(gl.ARRAY_BUFFER, 0, vbo); gl.drawArrays(gl.POINTS, 0, count);
+    return;
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const paths = [];
+  for (let i = 0; i < count; i++) {
+    const j = i * 7, x = dots[j], y = dots[j + 1], rad = dots[j + 6], ox = x - dots[j + 4], oy = y - dots[j + 5];
+    const k = ox || oy ? Math.min(LK - 1, Math.round(Math.sqrt(ox * ox + oy * oy) / 28 * (LK - 1))) : 0;
+    const pth = paths[k] || (paths[k] = new Path2D());
+    pth.moveTo(x + rad, y); pth.arc(x, y, rad, 0, 6.2832);
+  }
+  for (let k = 0; k < LK; k++) if (paths[k]) { ctx.fillStyle = warmCols[k]; ctx.fill(paths[k]); }
+}
+
+function draw(now) {
+  const t0 = performance.now();
+  const r = reduce ? 0 : HW.radius, r2 = r * r;
+  const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9, ringOn = age < 900;
+  const pointer = px > -1e4;
+  let moving = false;
+  if (!reduce) {
+    for (let i = 0; i < count; i++) {
+      const j = i * 7;
+      let x = dots[j], y = dots[j + 1], vx = dots[j + 2], vy = dots[j + 3];
+      const hx = dots[j + 4], hy = dots[j + 5];
+      const ddx = x - px, ddy = y - py, d2 = ddx * ddx + ddy * ddy;
+      const resting = vx === 0 && vy === 0 && x === hx && y === hy;
+      // a resting dot far from the pointer and from a shock ring needs no work at all
+      if (resting && !ringOn && !(pointer && d2 < r2)) continue;
+      if (ringOn) { // shock ring from a click
+        const dx = hx - ring.x, dy = hy - ring.y, d = Math.sqrt(dx * dx + dy * dy) + .001;
+        const band = 1 - Math.min(1, Math.abs(d - ringR) / 26);
+        if (band > 0) { const f = band * 3.2 * (1 - age / 900); vx += dx / d * f; vy += dy / d * f; }
+      }
+      if (pointer && d2 < r2) { // push away from the pointer
+        const d = Math.sqrt(d2) + .001, f = (1 - d / r) * 2.6;
+        vx += ddx / d * f; vy += ddy / d * f;
+      }
+      vx = (vx + (hx - x) * .05) * .84; vy = (vy + (hy - y) * .05) * .84; // spring back home
+      x += vx; y += vy;
+      if (Math.abs(vx) + Math.abs(vy) > .02 || Math.abs(x - hx) + Math.abs(y - hy) > .05) moving = true;
+      else { x = hx; y = hy; vx = 0; vy = 0; }
+      dots[j] = x; dots[j + 1] = y; dots[j + 2] = vx; dots[j + 3] = vy;
+    }
+  }
+  paint();
+  cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
+  skip = lite ? cost > 5 : cost > 7;
+  awake = !reduce && (moving || ringOn || (pointer && now - lastMove < 500)); // sleep once everything is home and nothing pushes
+}
+function loop(now) {
+  raf = 0; if (!visible) return;
+  if (skip && (++tick & 1)) { raf = requestAnimationFrame(loop); return; } // slow machine: halve the rate
+  draw(now); if (awake) raf = requestAnimationFrame(loop);
+}
+function wake() { awake = true; if (!raf && visible) raf = requestAnimationFrame(loop); }
+
+// Only the pointer near the word counts; everywhere else in the hero the word does not even wake up.
+// The pointer is read once per frame (not on every event) so no layout is forced by a burst of events.
+const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+const near = p => p[0] > -HW.radius && p[0] < W + HW.radius && p[1] > -HW.radius && p[1] < H + HW.radius;
+const away = () => { if (px > -1e4) { px = py = -1e5; wake(); } };
+let pendingMove = null, pumpRaf = 0;
+function applyPointer() {
+  pumpRaf = 0; const e = pendingMove; pendingMove = null;
+  if (!e) return;
+  const p = local(e);
+  if (near(p)) { px = p[0]; py = p[1]; lastMove = performance.now(); wake(); } else away();
+}
+hero.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  pendingMove = e; if (!pumpRaf) pumpRaf = requestAnimationFrame(applyPointer);
+});
+hero.addEventListener('pointerleave', () => { pendingMove = null; away(); });
+hero.addEventListener('pointerdown', e => {
+  if (reduce || e.target.closest('a,button')) return;
+  const p = local(e);
+  if (near(p)) { ring = { x: p[0], y: p[1], t: performance.now() }; wake(); }
+});
+new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible && awake) wake(); }).observe(hero);
+
+// re-lay out only when the hero's size really changes (fonts landing, text reflow, window resize)
+let pending = 0;
+new ResizeObserver(() => {
+  if (pending) return;
+  pending = requestAnimationFrame(() => {
+    pending = 0;
+    const b = hero.getBoundingClientRect();
+    if (Math.round(b.width) !== W || Math.round(b.height) !== heroH) { layout(); draw(performance.now()); }
+  });
+}).observe(hero);
+
+layout(); draw(performance.now());
+// the word is set in the real face once it has loaded
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Unbounded`, HW.word).then(() => { layout(); draw(performance.now()); });
+
+/* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
+// The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
+// concentration; each cell is inked by the gradient of V and only the RIDGE of that gradient survives (non-maximum
+// suppression), so every reaction front collapses to a thin crawling line instead of a wash. It runs on its own and
+// does not react to the pointer.
+(() => {
+  const canvas = $('#ascii');
+  if (!canvas) return;
+  const area = $('#hero'), g = canvas.getContext('2d');
+  const RAMP = ' .:-=+*#%@', BUCKETS = 6;
+  const DU = 1, DV = .5, FEED = .018, KILL = .051; // worm/front regime: sparse AND moving
+  const SUB = lite ? 3 : 4, WARM = lite ? 420 : 520, REDUCED_EXTRA = 400;
+  const CELL = lite ? 18 : 16, FONT = '"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace';
+  const SEEDS = 7, SEED_R = 4, GRAD_SCALE = .14, INK_FLOOR = .08;
+  const W_DIAG = .05, W_ORTHO = .8;
+  const GRAY = '#cfcfcf', RED = '#ff1f2d';
+
+  let cellW = CELL, cellH = CELL, cols = 0, rows = 0, dpr = 1, sized = false;
+  let U, V, Un, Vn, lf, rt, up, dn, charBuf, gradBuf;
+  let wx = W_ORTHO / 4, wy = W_ORTHO / 4;
+  const buckets = Array.from({ length: BUCKETS }, () => []);
+  let warmLeft = 0, raf = 0, visible = true, lastW = 0, lastH = 0, timer = 0, tick = 0, cost = 0, skip = lite;
+  let lastT = 0, dAvg = 16, nFrames = 0, tier = 0, best = 1000, grace = 120; // frame governor
+  let inkCells = 0, deadFrames = 0, nextDrop = 0; // keeps the reaction alive: on a small grid it can die out
+
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const wrap = (v, n) => ((v % n) + n) % n;
+
+  function seed() {
+    U.fill(1); V.fill(0);
+    const rnd = rng(0x5eed1);
+    for (let s = 0; s < SEEDS; s++) {
+      const cx = Math.floor(rnd() * cols), cy = Math.floor(rnd() * rows);
+      for (let dy = -SEED_R; dy <= SEED_R; dy++) for (let dx = -SEED_R; dx <= SEED_R; dx++) {
+        if (dx * dx + dy * dy > SEED_R * SEED_R) continue;
+        const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols);
+        V[i] = .5; U[i] = .25;
+      }
+    }
+  }
+
+  function drop() {
+    const cx = Math.floor(Math.random() * cols), cy = Math.floor(Math.random() * rows);
+    for (let dy = -SEED_R; dy <= SEED_R; dy++) for (let dx = -SEED_R; dx <= SEED_R; dx++) {
+      if (dx * dx + dy * dy > SEED_R * SEED_R) continue;
+      const i = wrap(cy + dy, rows) * cols + wrap(cx + dx, cols);
+      V[i] = .5; U[i] = .25;
+    }
+  }
+
+  // one Gray-Scott substep with a 9-point laplacian and toroidal wrap
+  function step() {
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const xm = lf[x], xp = rt[x], i = yc + x, u = U[i], v = V[i];
+        const lapU = -u + wx * (U[yc + xm] + U[yc + xp]) + wy * (U[ym + x] + U[yp + x]) + W_DIAG * (U[ym + xm] + U[ym + xp] + U[yp + xm] + U[yp + xp]);
+        const lapV = -v + wx * (V[yc + xm] + V[yc + xp]) + wy * (V[ym + x] + V[yp + x]) + W_DIAG * (V[ym + xm] + V[ym + xp] + V[yp + xm] + V[yp + xp]);
+        const uvv = u * v * v;
+        Un[i] = u + (DU * lapU - uvv + FEED * (1 - u));
+        Vn[i] = v + (DV * lapV + uvv - (FEED + KILL) * v);
+      }
+    }
+    let t = U; U = Un; Un = t; t = V; V = Vn; Vn = t;
+  }
+
+  function draw() {
+    if (!sized) return;
+    g.clearRect(0, 0, cols * cellW, rows * cellH);
+    for (let b = 0; b < BUCKETS; b++) buckets[b].length = 0;
+    // gradient magnitude of V over the whole grid
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const gx = (V[yc + rt[x]] - V[yc + lf[x]]) * .5, gy = (V[yp + x] - V[ym + x]) * .5;
+        gradBuf[yc + x] = Math.abs(gx) + Math.abs(gy);
+      }
+    }
+    // keep only the ridge (local maximum along EITHER axis), ramp-index it, bucket it by luminance
+    for (let y = 0; y < rows; y++) {
+      const yc = y * cols, ym = up[y] * cols, yp = dn[y] * cols;
+      for (let x = 0; x < cols; x++) {
+        const i = yc + x, gr = gradBuf[i];
+        charBuf[i] = 0;
+        const onRidge = (gr >= gradBuf[yc + rt[x]] && gr >= gradBuf[yc + lf[x]]) || (gr >= gradBuf[yp + x] && gr >= gradBuf[ym + x]);
+        if (!onRidge) continue;
+        let lum = gr / GRAD_SCALE;
+        lum = lum < 0 ? 0 : lum > 1 ? 1 : lum;
+        if (lum < INK_FLOOR) continue;
+        const ci = Math.floor(lum * (RAMP.length - 1));
+        charBuf[i] = ci;
+        if (ci === 0) continue;
+        buckets[Math.min(BUCKETS - 1, Math.floor(lum * BUCKETS))].push(i);
+      }
+    }
+    inkCells = 0; for (let b = 0; b < BUCKETS; b++) inkCells += buckets[b].length;
+    // one alpha write per bucket; the strongest fronts are red, the rest grey
+    for (let b = 0; b < BUCKETS; b++) {
+      const list = buckets[b];
+      if (!list.length) continue;
+      g.globalAlpha = .1 + b / (BUCKETS - 1) * .9;
+      g.fillStyle = b >= BUCKETS - 2 ? RED : GRAY;
+      for (let k = 0; k < list.length; k++) {
+        const idx = list[k], x = idx % cols, y = (idx - x) / cols;
+        g.fillText(RAMP[charBuf[idx]], x * cellW + cellW / 2, y * cellH + cellH / 2);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  function resize() {
+    const b = area.getBoundingClientRect(), width = b.width, height = b.height;
+    if (width < 2 || height < 2) { sized = false; return; }
+    lastW = Math.round(width); lastH = Math.round(height);
+    dpr = Math.min(devicePixelRatio || 1, 1.5);
+    canvas.width = Math.max(1, Math.round(width * dpr)); canvas.height = Math.max(1, Math.round(height * dpr));
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const m = document.createElement('canvas').getContext('2d');
+    m.font = `${CELL}px ${FONT}`;
+    cellW = Math.max(4, m.measureText('MMMMMMMMMM').width / 10); cellH = CELL;
+    g.font = `${CELL}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    cols = Math.max(8, Math.ceil(width / cellW)); rows = Math.max(8, Math.ceil(height / cellH));
+    // split the orthogonal laplacian budget by 1/dx^2 : 1/dy^2 so the field is isotropic ON SCREEN despite the tall cell
+    const a2 = (cellH / cellW) * (cellH / cellW);
+    wx = W_ORTHO / 2 * (a2 / (1 + a2)); wy = W_ORTHO / 2 * (1 / (1 + a2));
+    const n = cols * rows;
+    U = new Float32Array(n); V = new Float32Array(n); Un = new Float32Array(n); Vn = new Float32Array(n);
+    charBuf = new Uint8Array(n); gradBuf = new Float32Array(n);
+    lf = new Int32Array(cols); rt = new Int32Array(cols); up = new Int32Array(rows); dn = new Int32Array(rows);
+    for (let x = 0; x < cols; x++) { lf[x] = (x - 1 + cols) % cols; rt[x] = (x + 1) % cols; }
+    for (let y = 0; y < rows; y++) { up[y] = (y - 1 + rows) % rows; dn[y] = (y + 1) % rows; }
+    sized = true; seed();
+    tier = Math.min(tier, 1); nFrames = 0; dAvg = 16; grace = 120;
+    // warm-up, so the first paint is not a blank grid; spread over a few frames to avoid one long freeze
+    if (reduce) { for (let s = 0; s < WARM + REDUCED_EXTRA; s++) step(); draw(); warmLeft = 0; } else warmLeft = WARM;
+  }
+
+  function loop(now) {
+    raf = 0;
+    if (!visible || document.hidden) { lastT = 0; return; }
+    // governor: average real frame time of the page; too slow for a while -> half rate, still too slow -> freeze this layer
+    // It starts judging only once the layer has settled (warm-up and font loading make a few long frames), compares with the
+    // best frame time this screen has shown (a 30 Hz or power-saving display is not "slow"), and never freezes on a blip.
+    if (lastT && warmLeft === 0) {
+      const dt = Math.min(now - lastT, 100);
+      if (grace > 0) grace--;
+      else {
+        if (dt >= 4 && dt < best) best = dt;
+        dAvg += (dt - dAvg) * .05;
+        const base = Math.max(16, best);
+        if (++nFrames > 90 && tier < 2 && dAvg > Math.max(tier ? 36 : 26, base * (tier ? 2.2 : 1.6))) {
+          tier++; nFrames = 0; dAvg = base;
+          if (tier === 2) return; // freeze: the last picture stays on screen, nothing is computed any more
+        }
+      }
+    }
+    lastT = now;
+    if (skip && (++tick & 1)) { raf = requestAnimationFrame(loop); return; } // phones: 30 fps; slow PCs: halve the rate
+    if (sized) {
+      if (warmLeft > 0) {
+        const n = Math.min(warmLeft, 130);
+        for (let s = 0; s < n; s++) step();
+        warmLeft -= n;
+        if (warmLeft > 0) { raf = requestAnimationFrame(loop); return; }
+      }
+      const t0 = performance.now();
+      for (let s = 0; s < SUB; s++) step();
+      draw();
+      cost += (performance.now() - t0 - cost) * .1; // moving average of the work per frame
+      skip = lite || tier > 0 || cost > 9;
+      if (inkCells < 8) { if (++deadFrames > 20) { drop(); drop(); deadFrames = 0; } } else deadFrames = 0; // died out: new drops
+      if (now > nextDrop) { nextDrop = now + 6000 + Math.random() * 5000; if (cols * rows < 6000) drop(); } // small grids: a heartbeat
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  const wake = () => { if (!raf && !reduce && visible && !document.hidden && tier < 2) raf = requestAnimationFrame(loop); };
+
+  new IntersectionObserver(e => { visible = e[0].isIntersecting; if (visible) wake(); }).observe(area);
+  document.addEventListener('visibilitychange', wake);
+  // re-create the dish only when the hero really changes size
+  new ResizeObserver(() => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const b = area.getBoundingClientRect();
+      if (Math.abs(Math.round(b.width) - lastW) > 1 || Math.abs(Math.round(b.height) - lastH) > 40) { resize(); wake(); }
+    }, 200);
+  }).observe(area);
+
+  const start = () => { resize(); wake(); };
+  const fonts = document.fonts && document.fonts.load ? document.fonts.load(`${CELL}px "JetBrains Mono"`, 'M') : Promise.resolve();
+  fonts.then(() => document.fonts.ready).then(start, start);
+})();
+
 /* ---------- portfolio: works from the Telegram channel (data in works.js) ---------- */
 // Cards are built from window.WORKS. A work with a video file shows its poster and plays a muted preview on hover; on
 // phones nothing plays by itself (no mobile data spent), the video loads only in the viewer. A work may have several
@@ -21,8 +454,7 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
   const art = (w, i) => `<span class="wk-art"><i>${num(i)}</i><b>${esc(w.title)}</b><span>${w.clips.length ? 'видео' : 'видео в Telegram'} · ${esc(w.time || '')}</span></span>`;
   list.forEach(w => { w.clips = [].concat(w.video || []).filter(Boolean); w.posters = [].concat(w.poster || []).filter(Boolean); });
 
-  $('#wkCount').dataset.count = $('#wkCount').textContent = list.length; // the real number even before the count-up runs
-  if ($('#hwCount')) $('#hwCount').textContent = list.length; // the portfolio link in the hero
+  $('#wkCount').dataset.count = list.length;
   grid.innerHTML = list.map((w, i) => `
     <button type="button" class="wk reveal spot" data-i="${i}" data-kind="${esc(w.kind)}" style="--d:${(i % 3) * .09}s">
       <span class="wk-media${w.tall ? ' tall' : ''}">
@@ -102,9 +534,7 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
     const w = list[i]; cur = i;
     media.innerHTML = w.clips.length
       ? `<video controls autoplay playsinline preload="auto"></video>${w.clips.length > 1 ? `<div class="wv-clips" role="tablist" aria-label="Ролики">${w.clips.map((_, k) => `<button type="button" role="tab" data-k="${k}">${esc((w.parts || [])[k] || 'Ролик ' + (k + 1))}</button>`).join('')}</div>` : ''}`
-      : `${w.posters[0] ? `<img src="${esc(w.posters[0])}" alt="">` : art(w, i)}` + (w.time || !w.site // a work with no video at all leads to its live site
-        ? `<a class="wv-tg btn primary" href="${esc(w.post)}" target="_blank" rel="noopener">${play}<span>Смотреть видео в Telegram</span></a>`
-        : `<a class="wv-tg btn primary" href="${esc(w.site)}" target="_blank" rel="noopener"><span>Открыть сайт</span></a>`);
+      : `${w.posters[0] ? `<img src="${esc(w.posters[0])}" alt="">` : art(w, i)}<a class="wv-tg btn primary" href="${esc(w.post)}" target="_blank" rel="noopener">${play}<span>Смотреть видео в Telegram</span></a>`;
     if (w.clips.length) clip(0);
     $('#wvKind').textContent = `${num(i)} · ${w.kind || ''}${w.time ? ' · ' + w.time : ''}`;
     $('#wvTitle').textContent = w.title;
@@ -181,6 +611,31 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
   }, { passive: true });
 })();
 
+/* ---------- hero: «Максим делает …» types itself, then erases like Backspace ---------- */
+(() => {
+  const el = $('#typed');
+  if (!el || reduce) return;
+  const words = ['лендинг', 'Telegram-бота', 'бота-парсер', 'интернет-магазин', 'сайт-визитку', 'админ-панель',
+    'интеграцию ИИ', 'автопостинг в соцсети', 'калькулятор цен', 'CRM-интеграцию'];
+  let w = 0, n = el.textContent.length, del = true, onScreen = true;
+  new IntersectionObserver(e => { onScreen = e[0].isIntersecting; }).observe(el);
+  (function tick() {
+    let wait;
+    if (!onScreen || document.hidden) wait = 400; // nothing to look at: just check again later
+    else if (del) {
+      el.textContent = words[w].slice(0, --n);
+      wait = n ? 26 + Math.random() * 18 : 320;
+      if (!n) { del = false; w = (w + 1) % words.length; }
+    } else {
+      el.textContent = words[w].slice(0, ++n);
+      wait = n < words[w].length ? 55 + Math.random() * 55 : 1700;
+      if (n === words[w].length) del = true;
+    }
+    el.parentNode.classList.toggle('typing', wait < 300);
+    setTimeout(tick, wait);
+  })();
+})();
+
 /* ---------- headings: words rise out of a mask ---------- */
 function splitWords(el) {
   let n = 0;
@@ -233,6 +688,80 @@ if (!touch) {
   document.addEventListener('pointerover', e => cur.classList.toggle('big', !!hot(e.target)));
 }
 
+/* ---------- clicks: a finger pressed on glass, a fingerprint left behind, confetti on buttons ---------- */
+// Any press bends the «glass» under the finger (a small lens that grows while held) and leaves a faint fingerprint
+// that melts away in a few seconds. Buttons also get a ripple from the press point and a small burst of confetti
+// in the site's colours. Everything is a few DOM nodes that remove themselves; nothing runs between clicks.
+(() => {
+  if (reduce) return;
+  // fingerprint: broken concentric ridges, built once and reused
+  const ridges = Array.from({ length: 9 }, (_, k) => {
+    const rx = 3 + k * 2.6, ry = 4 + k * 3.3, c = 2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2);
+    const gap = 2 + (k * 7) % 5, dash = (c / (2 + (k % 3))) - gap;
+    return `<ellipse cx="24" cy="30" rx="${rx}" ry="${ry}" stroke-dasharray="${dash.toFixed(1)} ${gap}" stroke-dashoffset="${(k * 13) % 17}"/>`;
+  }).join('');
+  const PRINT = `<svg viewBox="0 0 48 60" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round">${ridges}<path d="M14 49c4-3 7-9 8-17M33 48c-2-4-3-9-3-14"/></svg>`;
+  const COLORS = ['#ff1f2d', '#ffffff', '#ff6a73', '#b3000f', '#ffd0d3'];
+  const BTN = '.btn,.nav-cta,.sticky,.cta,.pf,.chan,button:not(.wk)';
+
+  function confetti(x, y, big) {
+    const box = document.createElement('div'); box.className = 'cf';
+    box.style.transform = `translate(${x}px,${y}px)`;
+    document.body.append(box);
+    const n = big ? 26 : 14, g = 1100;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('i'), round = Math.random() < .3;
+      el.style.background = COLORS[i % COLORS.length];
+      if (round) el.style.borderRadius = '50%', el.style.height = el.style.width = '6px';
+      box.append(el);
+      const a = (-90 + (Math.random() - .5) * 150) * Math.PI / 180, v = (big ? 330 : 240) + Math.random() * 260;
+      const vx = Math.cos(a) * v, vy = Math.sin(a) * v, spin = (Math.random() - .5) * 1080, dur = 900 + Math.random() * 600;
+      const frames = [];
+      for (let k = 0; k <= 8; k++) {
+        const t = k / 8 * dur / 1000;
+        frames.push({ transform: `translate(${(vx * t).toFixed(1)}px,${(vy * t + g * t * t / 2).toFixed(1)}px) rotate(${(spin * k / 8).toFixed(0)}deg) rotateX(${k * 70}deg)`, opacity: k < 6 ? 1 : (8 - k) / 3 });
+      }
+      el.animate(frames, { duration: dur, easing: 'cubic-bezier(.25,.6,.4,1)', fill: 'forwards' });
+    }
+    setTimeout(() => box.remove(), 1600);
+  }
+
+  document.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    const x = e.clientX, y = e.clientY;
+    // glass under the finger + the print it leaves
+    const pr = document.createElement('div');
+    pr.className = 'press'; pr.style.transform = `translate(${x}px,${y}px)`;
+    pr.innerHTML = `<i class="lens"></i><b class="print" style="--r:${(Math.random() * 50 - 25).toFixed(0)}deg">${PRINT}</b>`;
+    document.body.append(pr);
+    const up = () => { pr.classList.add('up'); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    setTimeout(() => pr.remove(), 4200);
+
+    const b = e.target.closest && e.target.closest(BTN);
+    if (!b) return;
+    if (b.matches('.btn,.nav-cta,.sticky,.cta')) {
+      const r = b.getBoundingClientRect(), rip = document.createElement('span');
+      rip.className = 'rip'; rip.style.setProperty('--x', x - r.left + 'px'); rip.style.setProperty('--y', y - r.top + 'px');
+      b.append(rip); rip.addEventListener('animationend', () => rip.remove());
+    }
+    confetti(x, y, b.getBoundingClientRect().width > 120);
+  }, { passive: true });
+})();
+
+/* ---------- magnetic ---------- */
+if (!touch && !reduce) $$('[data-magnetic]').forEach(el => {
+  el.addEventListener('pointermove', e => {
+    const r = el.getBoundingClientRect();
+    el.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .28}px,${(e.clientY - r.top - r.height / 2) * .35}px)`;
+  });
+  el.addEventListener('pointerleave', () => {
+    el.style.transition = 'transform .6s cubic-bezier(.2,.8,.2,1)';
+    el.style.transform = '';
+    setTimeout(() => el.style.transition = '', 600);
+  });
+});
+
 /* ---------- spotlight cards ---------- */
 $$('.spot').forEach(c => c.addEventListener('pointermove', e => {
   const r = c.getBoundingClientRect();
@@ -251,20 +780,38 @@ function countUp(el) {
 }
 setTimeout(() => $$('.trust [data-count]').forEach(countUp), 1300);
 
+/* ---------- text scramble for labels ---------- */
+function scramble(el) {
+  const node = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+  if (!node) return;
+  const final = node.textContent, chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#/_', t0 = performance.now();
+  (function f(t) {
+    const p = Math.min((t - t0) / 900, 1), n = Math.floor(p * final.length);
+    node.textContent = final.slice(0, n) + [...final.slice(n)].map(c => c === ' ' ? ' ' : chars[Math.random() * chars.length | 0]).join('');
+    if (p < 1) requestAnimationFrame(f); else node.textContent = final;
+  })(t0);
+}
+
 /* ---------- reveal ---------- */
 const io = new IntersectionObserver(es => es.forEach(e => {
   if (!e.isIntersecting) return;
   e.target.classList.add('in');
+  if (e.target.hasAttribute('data-scramble') && !reduce) scramble(e.target);
   $$('[data-count]', e.target).forEach(countUp);
   if (e.target.classList.contains('split-on')) setTimeout(() => e.target.classList.add('done'), 1100 + $$('.wi', e.target).length * 65);
   io.unobserve(e.target);
 }), { threshold: .18 });
 $$('.reveal').forEach(el => io.observe(el));
 
+/* ---------- scroll-driven word highlight ---------- */
+const scrub = $('#scrub');
+scrub.innerHTML = scrub.textContent.trim().split(/\s+/).map(w => `<span class="wd">${w}</span>`).join(' ');
+const words = $$('.wd', scrub);
+
 /* ---------- scroll effects ---------- */
-const bar = $('#progress'), nav = $('#nav'), sticky = $('#sticky');
+const bar = $('#progress'), nav = $('#nav'), giant = $('#giant'), sticky = $('#sticky'), services = $('#services');
 const contactsEl = document.getElementById('contacts');
-let lastY = scrollY, ticking = false;
+let lastY = scrollY, ticking = false, litN = -1;
 function update() {
   ticking = false;
   const max = document.documentElement.scrollHeight - innerHeight;
@@ -272,6 +819,16 @@ function update() {
   nav.classList.toggle('hide', scrollY > lastY && scrollY > 200);
   sticky.classList.toggle('show', scrollY > innerHeight * .8 && contactsEl.getBoundingClientRect().top > innerHeight * .35);
   lastY = scrollY;
+
+  const r = scrub.getBoundingClientRect();
+  if (r.bottom > -200 && r.top < innerHeight + 200) {
+    const p = Math.min(1, Math.max(0, (innerHeight * .85 - r.top) / (r.height + innerHeight * .35)));
+    const n = Math.round(p * words.length);
+    if (n !== litN) { words.forEach((w, i) => w.classList.toggle('lit', i < n)); litN = n; }
+  }
+
+  const sr = services.getBoundingClientRect();
+  if (!reduce && sr.bottom > -300 && sr.top < innerHeight + 300) giant.style.transform = `translateX(${-sr.top * .45}px)`;
 }
 function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
 addEventListener('scroll', onScroll, { passive: true }); update();
@@ -295,6 +852,31 @@ addEventListener('scroll', onScroll, { passive: true }); update();
   }, { rootMargin: '-49% 0px -49% 0px' });
   secs.forEach(s => obs.observe(s));
 })();
+
+/* ---------- hero stage parallax ---------- */
+const fls = $$('.fl');
+if (!touch && !reduce && fls.length) {
+  let nx = 0, ny = 0, queued = 0;
+  const apply = () => { queued = 0; fls.forEach(f => { const d = +f.dataset.depth; f.style.translate = `${nx * -d}px ${ny * -d}px`; }); };
+  addEventListener('pointermove', e => { nx = e.clientX / innerWidth - .5; ny = e.clientY / innerHeight - .5; if (!queued) queued = requestAnimationFrame(apply); });
+}
+
+/* ---------- eye follows the cursor while its block is on screen ---------- */
+const iris = $('.iris'), eyeSvg = $('.eye-svg');
+if (iris && eyeSvg && !reduce) {
+  let eyeVisible = false, ix = 0, iy = 0;
+  new IntersectionObserver(e => eyeVisible = e[0].isIntersecting).observe(eyeSvg);
+  (function look() {
+    requestAnimationFrame(look);
+    if (!eyeVisible) return;
+    const r = eyeSvg.getBoundingClientRect(), k = r.width / 240;
+    const dx = mouse.x - (r.left + r.width / 2), dy = mouse.y - (r.top + r.height / 2);
+    const dist = Math.hypot(dx, dy) || 1, f = Math.min(1, dist / (260 * k));
+    const tx = mouse.moved ? dx / dist * 36 * f : 0, ty = mouse.moved ? dy / dist * 11 * f : 0;
+    ix += (tx - ix) * .14; iy += (ty - iy) * .14;
+    iris.style.transform = `translate(${ix.toFixed(2)}px,${iy.toFixed(2)}px)`;
+  })();
+}
 
 /* ---------- pricing calculator: «Ваш вкус» ---------- */
 // Every price lives in CFG. Source: the Kwork offer: base 7 000 (Эконом), «+5 блоков» 4 000, «Telegram-бот» 3 000.
@@ -332,22 +914,10 @@ addEventListener('scroll', onScroll, { passive: true }); update();
     <div class="cu-info"><b>${label}</b><span>${desc}</span></div><em class="cu-price">${price}</em>
     <div class="stp"><button type="button" data-d="-1" aria-label="Убрать: ${label}">−</button><output>${value}</output><button type="button" data-d="1" aria-label="Добавить: ${label}">+</button></div></div>`;
   $('#cuBlocks').innerHTML = row('blocks', 'Количество блоков', `В основе до ${CFG.base.blocks}, добавляем по ${CFG.pack.size}`, '+' + fmt(CFG.pack.price) + ' за +' + CFG.pack.size, CFG.base.blocks);
-  // an option is either in or out, so it is a switch, not a − / + stepper
-  const tog = (id, label, desc, price) => `<button type="button" class="cu-row cu-tog" data-id="${id}" aria-pressed="false">
-    <span class="cu-info"><b>${label}</b><span>${desc}</span></span><em class="cu-price">${price}</em><i class="cu-check" aria-hidden="true"></i></button>`;
   for (const g of ['std', 'biz', 'extra']) {
     $('#cu' + g[0].toUpperCase() + g.slice(1)).innerHTML = CFG.options.filter(o => o.group === g)
-      .map(o => tog(o.id, o.label, o.desc, o.ask ? 'по договорённости' : '+' + fmt(o.price))).join('');
+      .map(o => row(o.id, o.label, o.desc, o.ask ? 'по договорённости' : '+' + fmt(o.price), 0)).join('');
   }
-  // the calculator stays folded until the client asks for it: the three packages come first
-  const openBtn = $('#cuOpen'), grid = $('#cuGrid');
-  openBtn.addEventListener('click', () => {
-    const open = grid.hidden;
-    grid.hidden = !open;
-    openBtn.setAttribute('aria-expanded', open);
-    const label = $('[data-t]', openBtn) || $('span', openBtn); // the label is wrapped for the hover roll
-    label.textContent = label.dataset.t = open ? 'Свернуть' : 'Собрать свой вариант';
-  });
   $('#cuStyles').innerHTML = CFG.styles.map(s => `<button type="button" class="cu-style" aria-pressed="false">${s}</button>`).join('');
   const presets = [['econ', 'Как «Эконом»'], ['std', 'Как «Стандарт»'], ['biz', 'Как «Бизнес»']];
   $('#cuPresets').insertAdjacentHTML('beforeend', presets.map(p => `<button type="button" data-preset="${p[0]}">${p[1]}</button>`).join(''));
@@ -410,8 +980,7 @@ addEventListener('scroll', onScroll, { passive: true }); update();
     $('#cuTg').classList.toggle('primary', !r.pkg); $('#cuTg').classList.toggle('ghost', !!r.pkg);
     $('#cuKwork').href = kworkHref;
     $('#cuTg').href = TG + '?text=' + encodeURIComponent(message(r));
-    $$('.cu-tog', root).forEach(el => { const on = state.qty[el.dataset.id] > 0; el.classList.toggle('on', on); el.setAttribute('aria-pressed', on); });
-    $$('.cu-row:not(.cu-tog)', root).forEach(el => {
+    $$('.cu-row', root).forEach(el => {
       const id = el.dataset.id, v = id === 'blocks' ? state.packs : state.qty[id];
       const max = id === 'blocks' ? CFG.pack.max : 1;
       $('output', el).textContent = id === 'blocks' ? CFG.base.blocks + state.packs * CFG.pack.size : v;
@@ -424,9 +993,8 @@ addEventListener('scroll', onScroll, { passive: true }); update();
   }
 
   root.addEventListener('click', e => {
-    const step = e.target.closest('[data-d]'), st = e.target.closest('.cu-style'), pr = e.target.closest('[data-preset]'), tg = e.target.closest('.cu-tog');
-    if (tg) state.qty[tg.dataset.id] = state.qty[tg.dataset.id] ? 0 : 1;
-    else if (step) {
+    const step = e.target.closest('[data-d]'), st = e.target.closest('.cu-style'), pr = e.target.closest('[data-preset]');
+    if (step) {
       const id = step.closest('.cu-row').dataset.id, d = +step.dataset.d;
       if (id === 'blocks') state.packs = Math.max(0, Math.min(CFG.pack.max, state.packs + d));
       else state.qty[id] = Math.max(0, Math.min(1, state.qty[id] + d));
