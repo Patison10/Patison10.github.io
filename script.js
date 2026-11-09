@@ -12,11 +12,12 @@ addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY;
 // Kept cheap on purpose: the canvas covers only the band under the word, the dots are drawn on the GPU (WebGL points,
 // one draw call) with a Canvas 2D fallback, the pointer is handled once per frame, and nothing runs unless the pointer
 // is near the word or dots are still moving. The band is always repainted as a whole (partial repaints left seams).
+const HERO_WORD = false; // the big dotted «patson» word under the hero text is switched off
 let cv = $('#grid'), ctx = null, gl = null, glLost = false;
 const hero = $('#hero');
 const lite = touch || innerWidth < 900;
 const HW = {
-  word: 'patson', face: '"Unbounded","Geologica","Helvetica Neue",Arial,sans-serif', weight: 800,
+  word: 'patson', face: '"Montserrat","Helvetica Neue",Arial,sans-serif', weight: 800,
   gap: lite ? 3 : 6, radius: lite ? 50 : 90, crop: lite ? .12 : .08, margin: lite ? 40 : 70, fill: lite ? .94 : .9,
   ink: [196, 196, 196], warm: [255, 31, 45]
 };
@@ -61,7 +62,7 @@ function useCanvas2D() { // WebGL missing or broken: a canvas can never switch c
   if (gl) { const fresh = cv.cloneNode(false); cv.replaceWith(fresh); cv = fresh; gl = null; }
   ctx = cv.getContext('2d');
 }
-if (!/[?&]gl=0\b/.test(location.search)) {
+if (HERO_WORD && !/[?&]gl=0\b/.test(location.search)) {
   gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
   if (gl && !initGL()) useCanvas2D();
   if (gl) {
@@ -72,6 +73,7 @@ if (!/[?&]gl=0\b/.test(location.search)) {
 if (!gl) useCanvas2D();
 
 function layout() {
+  if (!HERO_WORD) { hero.style.setProperty('--word-h', '0px'); return; }
   const m = document.createElement('canvas').getContext('2d');
   W = Math.max(1, Math.round(hero.getBoundingClientRect().width));
   m.font = `${HW.weight} 100px ${HW.face}`;
@@ -156,6 +158,7 @@ function paint() {
 }
 
 function draw(now) {
+  if (!HERO_WORD) { awake = false; return; }
   const t0 = performance.now();
   const r = reduce ? 0 : HW.radius, r2 = r * r;
   const age = ring.t < 0 ? 1e9 : now - ring.t, ringR = age * .9, ringOn = age < 900;
@@ -235,7 +238,7 @@ new ResizeObserver(() => {
 
 layout(); draw(performance.now());
 // the word is set in the real face once it has loaded
-if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Unbounded`, HW.word).then(() => { layout(); draw(performance.now()); });
+if (document.fonts && document.fonts.load) document.fonts.load(`${HW.weight} 100px Montserrat`, HW.word).then(() => { layout(); draw(performance.now()); });
 
 /* ---------- hero: ASCII reaction front (live Gray-Scott reaction-diffusion) ---------- */
 // The simulation grid IS the glyph grid: every character is one cell of a real chemical solver. Luminance is not the
@@ -693,7 +696,7 @@ if (!touch) {
 // that melts away in a few seconds. Buttons also get a ripple from the press point and a small burst of confetti
 // in the site's colours. Everything is a few DOM nodes that remove themselves; nothing runs between clicks.
 (() => {
-  if (reduce) return;
+  return; // click effects (glass, fingerprint, confetti) are switched off: calmer site
   // fingerprint: broken concentric ridges, built once and reused
   const ridges = Array.from({ length: 9 }, (_, k) => {
     const rx = 3 + k * 2.6, ry = 4 + k * 3.3, c = 2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2);
@@ -750,7 +753,7 @@ if (!touch) {
 })();
 
 /* ---------- magnetic ---------- */
-if (!touch && !reduce) $$('[data-magnetic]').forEach(el => {
+if (false && !touch && !reduce) $$('[data-magnetic]').forEach(el => { // magnetic buttons off: calmer site
   el.addEventListener('pointermove', e => {
     const r = el.getBoundingClientRect();
     el.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .28}px,${(e.clientY - r.top - r.height / 2) * .35}px)`;
@@ -796,7 +799,7 @@ function scramble(el) {
 const io = new IntersectionObserver(es => es.forEach(e => {
   if (!e.isIntersecting) return;
   e.target.classList.add('in');
-  if (e.target.hasAttribute('data-scramble') && !reduce) scramble(e.target);
+  /* label scramble off: calmer site */
   $$('[data-count]', e.target).forEach(countUp);
   if (e.target.classList.contains('split-on')) setTimeout(() => e.target.classList.add('done'), 1100 + $$('.wi', e.target).length * 65);
   io.unobserve(e.target);
@@ -1028,3 +1031,15 @@ if (iris && eyeSvg && !reduce) {
 /* ---------- pause the CSS animations of everything that is off screen ---------- */
 const offObs = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('off', !e.isIntersecting)), { rootMargin: '120px' });
 $$('section, .marquee').forEach(el => offObs.observe(el));
+
+/* ---------- price tabs: packages / calculator ---------- */
+(() => {
+  const tabs = [$('#tabPlans'), $('#tabCustom')], panels = [$('#plans'), $('#custom')];
+  if (tabs.some(t => !t) || panels.some(p => !p)) return;
+  const show = i => {
+    tabs.forEach((t, k) => { t.classList.toggle('on', k === i); t.setAttribute('aria-selected', String(k === i)); });
+    panels.forEach((p, k) => { p.hidden = k !== i; if (k === i) { p.classList.add('in'); $$('.reveal', p).forEach(r => r.classList.add('in')); } });
+  };
+  tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
+  show(0);
+})();

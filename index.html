@@ -20,8 +20,8 @@
 <link rel="canonical" href="https://patison10.github.io/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23ff1f2d'/%3E%3C/svg%3E">
 <script>document.documentElement.classList.add('js')</script>
-<link rel="preload" href="fonts/unbounded-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/geologica-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/montserrat-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -46,7 +46,6 @@
 <main>
   <!-- HERO -->
   <section id="hero" class="hero">
-    <canvas id="ascii" aria-hidden="true"></canvas>
     <canvas id="grid" aria-hidden="true"></canvas>
     <div class="glow" id="glow" aria-hidden="true"></div>
 
@@ -222,7 +221,11 @@
   <section id="pricing" class="pricing">
     <p class="label reveal" data-scramble><span>06</span> ЦЕНЫ</p>
     <h2 class="h2 reveal">Понятная цена, <span class="red">без сюрпризов</span></h2>
-    <div class="plans">
+    <div class="ptabs" role="tablist" aria-label="Цены">
+      <button type="button" role="tab" id="tabPlans" aria-controls="plans" aria-selected="true" class="on">Готовые пакеты</button>
+      <button type="button" role="tab" id="tabCustom" aria-controls="custom" aria-selected="false">Калькулятор «Ваш вкус»</button>
+    </div>
+    <div class="plans" id="plans" role="tabpanel" aria-labelledby="tabPlans">
       <article class="plan reveal spot">
         <h3>Эконом</h3>
         <p class="for">Быстрый старт: простой лендинг, чтобы уже на этой неделе принимать заявки.</p>
@@ -249,7 +252,7 @@
         <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="btn ghost" data-magnetic><span>Заказать</span></a>
       </article>
     </div>
-    <article class="custom reveal" id="custom">
+    <article class="custom reveal in" id="custom" role="tabpanel" aria-labelledby="tabCustom" hidden>
       <div class="cu-head">
         <span class="tag">Собери сам</span>
         <h3>Ваш вкус</h3>

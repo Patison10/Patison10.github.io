@@ -1,4 +1,11 @@
-/* self-hosted fonts (OFL): Unbounded (display), Geologica (text), JetBrains Mono, Playfair Display */
+/* self-hosted font (OFL): Montserrat, Latin + Cyrillic subset, weights 400-900 */
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/montserrat-400.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/montserrat-500.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/montserrat-600.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/montserrat-700.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:800;font-display:swap;src:url(fonts/montserrat-800.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:900;font-display:swap;src:url(fonts/montserrat-900.woff2) format('woff2')}
+/* old fonts below are no longer used (kept as is): Unbounded, Geologica, JetBrains Mono, Playfair Display */
 @font-face {
   font-family: 'Unbounded';
   font-style: normal;
@@ -67,17 +74,17 @@
   --bg:#050505;--fg:#f2f2f2;--muted:#9b9b9b;--line:rgba(255,255,255,.1);--card:#0b0b0b;
   --red:#ff1f2d;--red2:#b3000f;--redglow:rgba(255,31,45,.55);
   --pad:clamp(20px,6vw,110px);
-  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --mono:"Montserrat","Helvetica Neue",Arial,sans-serif;
   --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--fg);font-family:"Geologica","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.5}
+body{background:var(--bg);color:var(--fg);font-family:"Montserrat","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.5}
 a{color:inherit;text-decoration:none}
 ul,ol{list-style:none}
 ::selection{background:var(--red);color:#000}
 section{position:relative}
-.red,.hot{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:500;letter-spacing:-.02em}
+.red,.hot{font-family:"Montserrat","Helvetica Neue",Arial,sans-serif;font-style:normal;font-weight:700;letter-spacing:-.02em}
 .red{color:var(--red);text-shadow:0 0 50px rgba(255,31,45,.35)}
 /* editorial page frame */
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
@@ -92,7 +99,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
 .cursor{position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border:1.5px solid var(--red);box-shadow:0 0 0 1.5px rgba(255,255,255,.38);border-radius:50%;pointer-events:none;z-index:120;transition:width .25s,height .25s,margin .25s,background .25s;opacity:0}
 .cursor.on{opacity:1}
-.cursor.big{width:76px;height:76px;margin:-38px 0 0 -38px;background:rgba(255,31,45,.2)}
+.cursor.big{width:48px;height:48px;margin:-24px 0 0 -24px;background:rgba(255,31,45,.14)}
 @media (hover:none){.cursor{display:none}}
 
 /* nav */
@@ -667,7 +674,7 @@ html{overflow-x:clip}
 .wk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;flex-wrap:wrap}
 .wk-side{display:flex;align-items:center;flex-wrap:wrap;gap:1.2rem 2rem}
 .wk-count{display:flex;align-items:center;gap:.8rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;line-height:1.35}
-.wk-count b{font-family:"Geologica",sans-serif;font-size:clamp(3rem,6vw,5rem);font-weight:900;color:var(--red);letter-spacing:-.06em;line-height:.8;font-variant-numeric:tabular-nums}
+.wk-count b{font-family:"Montserrat",sans-serif;font-size:clamp(3rem,6vw,5rem);font-weight:900;color:var(--red);letter-spacing:-.06em;line-height:.8;font-variant-numeric:tabular-nums}
 .wk-filters{display:flex;flex-wrap:wrap;gap:.5rem}
 .wk-filters button{font:inherit;font-size:.88rem;color:#d4d4d4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.18);border-radius:99px;padding:.6rem 1.05rem;min-height:40px;cursor:pointer;transition:background .3s,border-color .3s,color .3s}
 .wk-filters button:hover{border-color:#fff;color:#fff}
@@ -713,7 +720,7 @@ html{overflow-x:clip}
 @keyframes scan{from{transform:translateY(-100%)}to{transform:translateY(300%)}}
 .wk-art i{position:absolute;right:.25em;top:.05em;font-style:normal;font-size:clamp(5rem,13vw,12rem);font-weight:900;letter-spacing:-.07em;line-height:1;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.2);transition:-webkit-text-stroke-color .4s,transform .6s var(--ease)}
 .wk:hover .wk-art i{-webkit-text-stroke-color:var(--red);transform:translateY(-8px)}
-.wk-art b{position:relative;font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1.7rem,3.6vw,3.2rem);letter-spacing:-.02em;line-height:1;max-width:12em}
+.wk-art b{position:relative;font-family:"Montserrat","Helvetica Neue",Arial,sans-serif;font-style:normal;font-weight:700;font-size:clamp(1.7rem,3.6vw,3.2rem);letter-spacing:-.02em;line-height:1;max-width:12em}
 .wk.wide .wk-art b{font-size:clamp(2rem,5.4vw,5rem)}
 .wk-art>span{position:relative;font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:#c4c4c4}
 .wk-art>span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:.6rem;vertical-align:.1em;animation:blink 2.4s infinite}
@@ -805,7 +812,7 @@ html.wv-lock{overflow:hidden}
 
 /* ===== display font: Unbounded for headlines, prices and big numbers; Geologica stays for reading text =====
    Unbounded is much wider than the old face, so the big sizes are scaled down to keep the same line breaks. */
-:root{--display:"Unbounded","Geologica","Helvetica Neue",Arial,sans-serif}
+:root{--display:"Montserrat","Helvetica Neue",Arial,sans-serif}
 .title,.h2,.big,.logo,.trust b,.track span,.giant span,.card h3,.swatches b,.step h3,.plan h3,.price,.cta strong,.chan-txt strong,
 .f-time b,.f-ring b,.tn b,.ask h3,.av,.pf-ico,.pf strong,.cu-head h3,.cu-total,.wk-count b,.wk-art i,.wk-meta strong,.wv-info h3,.nav-cta{font-family:var(--display)}
 .title{font-size:clamp(2.3rem,7vw,6.9rem);font-weight:800;letter-spacing:-.045em;line-height:.98}
@@ -922,3 +929,29 @@ html.wv-lock{overflow:hidden}
 /* keep the positioned ones where they are */
 .wv-tg{position:absolute}
 .sticky{position:fixed}
+
+/* ===== calm mode: fewer effects, softer colours (2026-11-09) ===== */
+[hidden]{display:none!important}
+.grain,.ambient,.marquee,.stage,.glow{display:none!important}
+.red,.hot,.f-time b,.eyewrap .tn b{text-shadow:none!important}
+.hot::before,.hot::after{display:none}
+.btn.primary:hover{box-shadow:none;filter:brightness(1.1)}
+.nav-cta,.sticky,.cta.main{box-shadow:none}
+.chan{background:rgba(255,255,255,.04)}
+.custom{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.14);box-shadow:none}
+.plan.hit{box-shadow:none}
+/* price tabs */
+.ptabs{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.4rem}
+.ptabs button{font:inherit;font-size:.95rem;font-weight:600;color:#ddd;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:.7rem 1.3rem;cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+.ptabs button:hover{border-color:#fff}
+.ptabs button.on,.ptabs button[aria-selected="true"]{background:var(--red);border-color:var(--red);color:#000}
+/* hero word "patson" is off: hide its canvas and keep a normal bottom padding */
+#grid{display:none!important}
+.hero{padding-bottom:64px}
+@media (min-width:1100px){.hero{padding-bottom:64px}}
+@media (max-width:900px){.hero{padding-bottom:56px}}
+/* ===== headings: Montserrat everywhere; plain words lighter, highlighted words much heavier ===== */
+.title,.h2,.big,.ask h3{font-weight:600}
+.title .hot,.h2 .red,.big .red,.ask h3 .red{font-weight:900}
+/* ===== soft red glow in the background: static, no animation ===== */
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 48vw 40vh at 82% 10%,rgba(255,31,45,.17),transparent 70%)}
