@@ -94,6 +94,11 @@ html[data-mode="studio"] #studio .flinks a:hover{color:#0a0a0a}
 .ag-title .red{font-weight:900}
 .ag-title{text-wrap:balance}
 #s-hero .tagline{max-width:36em;text-wrap:balance}
+/* телефон и планшет в столбик: четыре ровные строки */
+@media (max-width:899px){
+  .ag-title{font-size:clamp(1.35rem,8.3vw,3.4rem);line-height:1.08;letter-spacing:-.04em}
+  .ag-title .ag-l,.ag-title .ag-s{display:block;white-space:nowrap}
+}
 @media (min-width:900px){
   .ag-title{font-size:clamp(2.4rem,4.4vw,5rem)}
   .ag-l{display:block;white-space:nowrap}
@@ -127,12 +132,19 @@ html[data-mode="studio"] #studio .flinks a:hover{color:#0a0a0a}
   .logo{gap:0}
   .logo i{margin-right:.4rem}
 }
+@media (max-width:360px){
+  .nav{padding-left:.6rem;gap:.35rem}
+  .mode button{padding:.4rem .6rem;font-size:.72rem}
+  .nav-cta{padding:.6rem .9rem;font-size:.8rem}
+}
 @media (max-width:480px){
   .logo{font-size:0}
   .logo i{margin:0 .2rem 0 0}
 }
 @media (max-width:700px){
   .ag-hero{padding-top:110px;min-height:auto}
+}
+@media (max-width:900px){
   .ag-hero .actions .btn{grid-column:1/-1;width:100%;justify-content:center;white-space:nowrap}
 }
 @media (prefers-reduced-motion:reduce){
