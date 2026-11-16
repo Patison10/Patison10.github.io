@@ -92,6 +92,13 @@ html[data-mode="studio"] #studio .flinks a:hover{color:#0a0a0a}
 .ag-hero-inner{position:relative;z-index:2;max-width:1100px}
 .ag-title{font-size:clamp(2.4rem,5.6vw,5.8rem);letter-spacing:-.045em;line-height:1.02;font-weight:600;margin-bottom:1.8rem;animation:up 1s .2s both}
 .ag-title .red{font-weight:900}
+.ag-title{text-wrap:balance}
+#s-hero .tagline{max-width:36em;text-wrap:balance}
+@media (min-width:900px){
+  .ag-title{font-size:clamp(2.4rem,4.4vw,5rem)}
+  .ag-l{display:block;white-space:nowrap}
+  #s-hero .tagline{max-width:none}
+}
 .ag-hero .tagline{animation:up 1s .5s both}
 .ag-hero .actions{animation:up 1s .7s both}
 .ag-hero .trust{animation:up 1s .9s both}
