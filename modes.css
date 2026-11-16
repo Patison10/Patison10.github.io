@@ -38,7 +38,7 @@ html[data-mode="studio"] #studio .red{color:#0a0a0a;text-shadow:none}
 html[data-mode="studio"] #studio .ask .red{color:#ff3b47}
 html[data-mode="studio"] #studio .label{color:rgba(255,255,255,.85)}
 html[data-mode="studio"] #studio .label span{background:#0a0a0a;color:#fff}
-html[data-mode="studio"] #studio .badge{border-color:rgba(0,0,0,.45);background:rgba(0,0,0,.22);color:#fff}
+html[data-mode="studio"] #studio .badge{border-color:rgba(255,255,255,.1);background:rgba(14,0,4,.4);color:#fff}
 html[data-mode="studio"] #studio .badge i{background:#fff;animation:none}
 html[data-mode="studio"] #studio .tagline,html[data-mode="studio"] #studio .sub{color:rgba(255,255,255,.92)}
 html[data-mode="studio"] #studio .trust{color:rgba(255,255,255,.85)}
@@ -52,9 +52,7 @@ html[data-mode="studio"] #studio .btn.ghost::after{display:none}
 html[data-mode="studio"] #studio .btn.primary .rip{background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,255,255,0) 70%)}
 
 /* карточки: чёрные, с красной подсветкой под курсором */
-html[data-mode="studio"] #studio .plan{background:#0a0a0a;border-color:rgba(255,255,255,.1)}
-html[data-mode="studio"] #studio .pf{background:#0a0a0a;border-color:rgba(255,255,255,.1);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-html[data-mode="studio"] #studio .ask{background:#0a0a0a;border-color:rgba(255,255,255,.1);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-mode="studio"] #studio .plan,html[data-mode="studio"] #studio .pf,html[data-mode="studio"] #studio .ask{background:rgba(14,0,4,.52);border:1px solid rgba(255,255,255,.09);box-shadow:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 html[data-mode="studio"] #studio .ask p{color:#b5b5b5}
 html[data-mode="studio"] #studio .ask .btn.primary{background:#fff;color:#0a0a0a}
 html[data-mode="studio"] #studio .ask .btn.ghost{background:transparent;border-color:rgba(255,255,255,.3)}
@@ -71,17 +69,17 @@ html[data-mode="studio"] #studio summary:hover{color:#0a0a0a}
 html[data-mode="studio"] #studio details p{color:rgba(255,255,255,.88)}
 html[data-mode="studio"] #studio .ag-list li{color:#fff}
 html[data-mode="studio"] #studio .ag-list li::before{background:#0a0a0a;box-shadow:none}
-html[data-mode="studio"] #studio .chips2 span{background:rgba(0,0,0,.2);border-color:rgba(0,0,0,.45);color:#fff;box-shadow:none}
+html[data-mode="studio"] #studio .chips2 span{background:rgba(14,0,4,.36);border-color:rgba(255,255,255,.09);color:#fff;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 html[data-mode="studio"] #studio .chips2 span:hover{background:#0a0a0a;border-color:#0a0a0a;color:#fff}
 html[data-mode="studio"] #studio .inc-side h3{color:rgba(255,255,255,.85)}
 
 /* контакты и футер */
 html[data-mode="studio"] #studio .glow2{background:radial-gradient(circle,rgba(0,0,0,.32),transparent 62%)}
-html[data-mode="studio"] #studio .cta{background:rgba(0,0,0,.2);border-color:rgba(0,0,0,.5);backdrop-filter:none;-webkit-backdrop-filter:none}
+html[data-mode="studio"] #studio .cta{background:rgba(14,0,4,.36);border-color:rgba(255,255,255,.09);box-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 html[data-mode="studio"] #studio .cta small{color:rgba(255,255,255,.75)}
-html[data-mode="studio"] #studio .cta.main{background:#0a0a0a;border-color:#0a0a0a;color:#fff}
+html[data-mode="studio"] #studio .cta.main{background:rgba(14,0,4,.78);border-color:rgba(255,255,255,.09);color:#fff}
 html[data-mode="studio"] #studio .cta.main small{color:rgba(255,255,255,.7)}
-html[data-mode="studio"] #studio .cta:hover{background:#0a0a0a;border-color:#0a0a0a;color:#fff;box-shadow:0 20px 80px -20px rgba(0,0,0,.8)}
+html[data-mode="studio"] #studio .cta:hover{background:rgba(14,0,4,.85);border-color:rgba(255,255,255,.16);color:#fff;box-shadow:0 20px 70px -24px rgba(0,0,0,.7)}
 html[data-mode="studio"] #studio .cta:hover small{color:rgba(255,255,255,.75)}
 html[data-mode="studio"] #studio .arrow{background:#fff;color:#0a0a0a}
 html[data-mode="studio"] #studio .cta:hover .arrow{background:#fff;color:#0a0a0a}
@@ -91,13 +89,17 @@ html[data-mode="studio"] #studio .flinks a:hover{color:#0a0a0a}
 
 /* ---------- страница для студий: свои блоки ---------- */
 .ag-hero{position:relative;min-height:92svh;display:flex;align-items:center;padding:140px var(--pad) 80px}
-.ag-hero-inner{position:relative;z-index:2;max-width:1000px}
-.ag-title{font-size:clamp(2.4rem,6.2vw,6rem);letter-spacing:-.05em;line-height:1;font-weight:900;margin-bottom:1.6rem;animation:up 1s .2s both}
+.ag-hero-inner{position:relative;z-index:2;max-width:1100px}
+.ag-title{font-size:clamp(2.4rem,5.6vw,5.8rem);letter-spacing:-.045em;line-height:1.02;font-weight:600;margin-bottom:1.8rem;animation:up 1s .2s both}
+.ag-title .red{font-weight:900}
 .ag-hero .tagline{animation:up 1s .5s both}
 .ag-hero .actions{animation:up 1s .7s both}
 .ag-hero .trust{animation:up 1s .9s both}
 .ag-sec{padding:clamp(60px,8vw,120px) var(--pad)}
-.ag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:4rem}
+.ag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:4rem}
+#studio .pf-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1000px){.ag-grid,#studio .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.ag-grid,#studio .pf-grid{grid-template-columns:1fr}}
 .ag-grid .plan .for{min-height:0;margin-bottom:1.4rem}
 .ag-list{display:grid;gap:1.1rem;max-width:44em}
 .ag-list li{position:relative;padding-left:1.6rem;color:#cfcfcf;line-height:1.55}
