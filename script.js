@@ -804,7 +804,7 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (e.target.classList.contains('split-on')) setTimeout(() => e.target.classList.add('done'), 1100 + $$('.wi', e.target).length * 65);
   io.unobserve(e.target);
 }), { threshold: .18 });
-$$('.reveal').forEach(el => io.observe(el));
+$$('#client .reveal').forEach(el => io.observe(el)); // the studio panel is revealed by modes.js
 
 /* ---------- scroll-driven word highlight ---------- */
 const scrub = $('#scrub');
@@ -836,11 +836,11 @@ function update() {
 function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
 addEventListener('scroll', onScroll, { passive: true }); update();
 
-/* ---------- nav: a red pill slides under the link of the section on screen ---------- */
-(() => {
-  const ind = $('#navInd'), links = $$('.nav nav a');
-  if (!ind || !links.length) return;
-  const secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
+/* ---------- nav: a red pill slides under the link of the section on screen (one per mode) ---------- */
+const navIndicator = (navEl, ind) => {
+  if (!navEl || !ind) return;
+  const links = $$('a', navEl);
+  const secs = links.map(a => $(a.getAttribute('href')));
   let active = null;
   const set = a => {
     if (a === active) return; active = a;
@@ -850,11 +850,13 @@ addEventListener('scroll', onScroll, { passive: true }); update();
   };
   // a thin line across the middle of the screen: whichever section crosses it is the active one
   const obs = new IntersectionObserver(() => {
-    const mid = innerHeight / 2, hit = secs.find(s => { const r = s.getBoundingClientRect(); return r.top < mid && r.bottom > mid; });
+    const mid = innerHeight / 2, hit = secs.find(s => { if (!s) return false; const r = s.getBoundingClientRect(); return r.top < mid && r.bottom > mid; });
     set(hit ? links[secs.indexOf(hit)] : null);
   }, { rootMargin: '-49% 0px -49% 0px' });
-  secs.forEach(s => obs.observe(s));
-})();
+  secs.forEach(s => s && obs.observe(s));
+};
+navIndicator($('.nav nav.only-client'), $('#navInd'));
+navIndicator($('.nav nav.only-studio'), $('#navIndS'));
 
 /* ---------- hero stage parallax ---------- */
 const fls = $$('.fl');

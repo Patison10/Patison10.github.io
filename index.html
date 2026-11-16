@@ -19,10 +19,11 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://patison10.github.io/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23050505'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23ff1f2d'/%3E%3C/svg%3E">
-<script>document.documentElement.classList.add('js')</script>
+<script>document.documentElement.classList.add('js');(function(){var m='client';try{var x=location.hash;if(x==='#studios')m='studio';else if(x==='#clients')m='client';else if(localStorage.getItem('mode')==='studio')m='studio'}catch(e){if(location.hash==='#studios')m='studio'}document.documentElement.dataset.mode=m;if(m==='studio'){document.title='Субподряд для агентств — Максим (Patson)'}})()</script>
 <link rel="preload" href="fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/montserrat-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="modes.css">
 </head>
 <body>
 <div class="progress" id="progress"></div>
@@ -31,20 +32,34 @@
 <div class="ambient" aria-hidden="true"><b></b><b></b><b></b></div>
 
 <header class="nav" id="nav">
-  <a href="#hero" class="logo"><i></i>Patson</a>
-  <nav>
+  <a href="#" class="logo"><i></i>Patson</a>
+  <div class="mode" role="tablist" aria-label="Для кого этот сайт">
+    <i class="mode-thumb" aria-hidden="true"></i>
+    <button type="button" role="tab" data-mode="client" aria-selected="true">Клиентам</button>
+    <button type="button" role="tab" data-mode="studio" aria-selected="false">Студиям</button>
+  </div>
+  <nav class="only-client">
     <i class="nav-ind" id="navInd" aria-hidden="true"></i>
     <a href="#problem">Зачем</a>
     <a href="#portfolio">Работы</a>
     <a href="#included">Что входит</a>
     <a href="#pricing">Цены</a>
     <a href="#faq">FAQ</a>
-    <a href="agencies.html">Агентствам</a>
   </nav>
-  <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="nav-cta" data-magnetic>Заказать</a>
+  <nav class="only-studio">
+    <i class="nav-ind" id="navIndS" aria-hidden="true"></i>
+    <a href="#s-services">Что беру</a>
+    <a href="#s-how">Как работаем</a>
+    <a href="#s-cases">Примеры</a>
+    <a href="#s-terms">Условия</a>
+    <a href="#s-faq">FAQ</a>
+  </nav>
+  <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="nav-cta only-client" data-magnetic>Заказать</a>
+  <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="nav-cta only-studio">Написать</a>
 </header>
 
 <main>
+<div id="client" class="only-client">
   <!-- HERO -->
   <section id="hero" class="hero">
     <canvas id="grid" aria-hidden="true"></canvas>
@@ -341,8 +356,177 @@
         <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
       </a>
     </div>
-    <footer><span>© 2026 Максим (Patson)</span><span class="flinks"><a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener">Kwork</a><a href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Telegram</a><a href="https://t.me/letpatsonwork" target="_blank" rel="noopener">Канал</a><a href="agencies.html">Агентствам</a></span><a href="#hero">Наверх <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a></footer>
+    <footer><span>© 2026 Максим (Patson)</span><span class="flinks"><a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener">Kwork</a><a href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Telegram</a><a href="https://t.me/letpatsonwork" target="_blank" rel="noopener">Канал</a><a href="#studios" data-mode-link="studio">Студиям</a></span><a href="#hero">Наверх <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a></footer>
   </section>
+</div>
+
+<div id="studio" class="only-studio">
+  <!-- HERO -->
+  <section id="s-hero" class="ag-hero">
+    <div class="ag-hero-inner">
+      <div class="badge"><i></i>Свободен для новых проектов</div>
+      <h1 class="ag-title">Разработка для агентств: <span class="red">сайты и боты</span> под вашим брендом</h1>
+      <p class="tagline">Беру на субподряд задачи, на которые не хватает рук: лендинги, сайты, Telegram-боты, парсеры и автоматизации. Вы общаетесь с клиентом — я делаю, тестирую и сдаю. Без лишних созвонов и сюрпризов по срокам.</p>
+      <div class="actions">
+        <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn primary"><span>Написать в Telegram</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#s-cases" class="btn ghost"><span>Смотреть примеры</span></a>
+      </div>
+      <ul class="trust">
+        <li><b>NDA</b> по запросу</li>
+        <li><b>White&nbsp;label</b> без упоминания меня</li>
+        <li><b>Оценка</b> до старта работ</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="s-services" class="ag-sec">
+    <p class="label reveal"><span>01</span> ЧТО БЕРУ</p>
+    <h2 class="h2 reveal">Задачи, которые можно <span class="red">отдать мне</span></h2>
+    <div class="ag-grid">
+      <article class="plan reveal spot">
+        <h3>Сайты и лендинги</h3>
+        <p class="for">Вёрстка и разработка по макету или с нуля, адаптив, анимации, формы заявок.</p>
+        <ul><li>По вашему макету или дизайн с нуля</li><li>Адаптив под телефон, планшет и десктоп</li><li>Заявки в Telegram или на почту</li></ul>
+      </article>
+      <article class="plan reveal spot">
+        <h3>Telegram-боты</h3>
+        <p class="for">Боты для заявок, записи, каталога, оплат и рассылок, с админ-панелью.</p>
+        <ul><li>Приём заявок и уведомления менеджеру</li><li>Меню, каталог, корзина, статусы</li><li>Админ-панель и рассылки</li></ul>
+      </article>
+      <article class="plan reveal spot">
+        <h3>Парсеры и скрипты</h3>
+        <p class="for">Сбор данных с сайтов и каналов, регулярные выгрузки, мониторинг.</p>
+        <ul><li>Парсинг сайтов, RSS и публичных каналов</li><li>Фильтры и отсев мусора</li><li>Выгрузка в таблицу, файл или бота</li></ul>
+      </article>
+      <article class="plan reveal spot">
+        <h3>Автоматизации</h3>
+        <p class="for">Связываю сервисы между собой, чтобы заявки и данные не гуляли руками.</p>
+        <ul><li>Интеграции по API и вебхукам</li><li>Уведомления, отчёты, синхронизация данных</li><li>Скрипты под рутинные операции</li></ul>
+      </article>
+      <article class="plan reveal spot">
+        <h3>Магазины и админки</h3>
+        <p class="for">Небольшие интернет-магазины, каталоги, калькуляторы стоимости и панели управления.</p>
+        <ul><li>Каталог, корзина, заказ</li><li>Калькуляторы и расчёт стоимости</li><li>Простые панели для клиента</li></ul>
+      </article>
+      <article class="plan reveal spot">
+        <h3>Правки и доработки</h3>
+        <p class="for">Подхватываю чужие проекты: исправляю, дорабатываю, довожу до запуска.</p>
+        <ul><li>Баги и недоделки в готовом коде</li><li>Новые функции в существующем сайте или боте</li><li>Перенос и публикация на хостинге</li></ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section id="s-how" class="ag-sec">
+    <p class="label reveal"><span>02</span> КАК РАБОТАЕМ</p>
+    <h2 class="h2 reveal">Четыре шага <span class="red">без лишнего</span></h2>
+    <div class="steps">
+      <div class="step reveal"><b>01</b><h3>Задача</h3><p>Присылаете бриф, ТЗ или макет. Нет ТЗ — помогу собрать вопросами. Отвечаю с оценкой срока и цены до начала работы.</p></div>
+      <div class="step reveal"><b>02</b><h3>Договорённости</h3><p>Фиксируем объём, срок и цену письменно. Работаем за фикс по задаче или по этапам. NDA подпишу, если нужно.</p></div>
+      <div class="step reveal"><b>03</b><h3>Разработка</h3><p>Показываю промежуточный результат, вопросы решаю в вашем чате. Клиент меня не видит: общаетесь вы.</p></div>
+      <div class="step reveal"><b>04</b><h3>Сдача</h3><p>Передаю код, доступы и короткую инструкцию. Исправления по ТЗ после сдачи — бесплатно. Новые функции — отдельной оценкой.</p></div>
+    </div>
+  </section>
+
+  <!-- CASES -->
+  <section id="s-cases" class="ag-sec">
+    <p class="label reveal"><span>03</span> ПРИМЕРЫ</p>
+    <h2 class="h2 reveal">Что я уже <span class="red">делал</span></h2>
+    <div class="pf-grid">
+      <div class="pf reveal spot">
+        <span class="pf-ico">B</span>
+        <div><small>TELEGRAM-БОТ · СОБСТВЕННЫЙ ПРОДУКТ</small><strong>Poisk-бот</strong><span>Круглосуточно ищет заказы на FL.ru, Профи.ру и в Telegram-каналах и присылает подходящие. Анализ рынка, админ-панель, статистика, рассылка. Python, aiogram 3, aiohttp, SQLite.</span></div>
+      </div>
+      <a class="pf reveal spot" href="demos/puls/" target="_blank" rel="noopener">
+        <span class="pf-ico">П</span>
+        <div><small>ЛЕНДИНГ · ДЕМО</small><strong>Пульс</strong><span>Сервис-центр: онлайн-расчёт стоимости ремонта по выбранному устройству и проверка статуса заказа.</span></div><i>→</i>
+      </a>
+      <a class="pf reveal spot" href="demos/forma/" target="_blank" rel="noopener">
+        <span class="pf-ico">Ф</span>
+        <div><small>ИНТЕРНЕТ-МАГАЗИН · ДЕМО</small><strong>Форма</strong><span>Минималистичный магазин с каталогом и калькулятором.</span></div><i>→</i>
+      </a>
+      <a class="pf reveal spot" href="demos/nexus/" target="_blank" rel="noopener">
+        <span class="pf-ico">N</span>
+        <div><small>ЛЕНДИНГ · ДЕМО</small><strong>NEXUS — GPU-хостинг</strong><span>Живая загрузка ускорителей, обновляется каждую секунду; тарифы и FAQ.</span></div><i>→</i>
+      </a>
+      <a class="pf reveal spot" href="demos/shetina/" target="_blank" rel="noopener">
+        <span class="pf-ico">Щ</span>
+        <div><small>ЛЕНДИНГ · РЕАЛЬНЫЙ ПРОЕКТ</small><strong>Барбершоп «Щетина»</strong><span>Сайт для малого бизнеса с отличной мобильной версией.</span></div><i>→</i>
+      </a>
+      <a class="pf reveal spot" href="#portfolio" data-mode-link="client" data-goto="#portfolio">
+        <span class="pf-ico">+</span>
+        <div><small>ПОРТФОЛИО</small><strong>Все работы</strong><span>Девять сайтов с видео и живыми демо на главной странице.</span></div><i>→</i>
+      </a>
+    </div>
+    <p class="sub reveal">Работы с пометкой «Демо» — мои собственные макеты, а не заказы клиентов. Реальный клиентский проект — «Щетина». Если нужен пример под вашу задачу, сделаю небольшое тестовое.</p>
+  </section>
+
+  <!-- TERMS -->
+  <section id="s-terms" class="ag-sec">
+    <p class="label reveal"><span>04</span> УСЛОВИЯ</p>
+    <h2 class="h2 reveal">Работаю <span class="red">предсказуемо</span></h2>
+    <div class="inc-grid">
+      <div class="reveal">
+        <ul class="ag-list">
+          <li><b>Белый ярлык.</b> Нигде не упоминаю себя в проекте, клиент общается только с вами.</li>
+          <li><b>NDA.</b> Подпишу соглашение о неразглашении, если это требуется.</li>
+          <li><b>Оплата.</b> Фикс за задачу или по этапам, предоплата за этап. Формат обсуждаем под вас.</li>
+          <li><b>Связь.</b> Отвечаю в Telegram в течение дня. Свободен ежедневно во второй половине дня и вечером.</li>
+          <li><b>ИИ в работе.</b> Использую ИИ-ассистентов, поэтому делаю быстро. Но результат проверяю и тестирую сам: читаю код, прогоняю сценарии, не оставляю ключи и токены в репозитории.</li>
+          <li><b>Сдача.</b> Работающий результат, доступы и инструкция по запуску.</li>
+        </ul>
+      </div>
+      <aside class="inc-side reveal">
+        <h3>Стек</h3>
+        <div class="chips2"><span>HTML / CSS / JS</span><span>Python</span><span>aiogram</span><span>aiohttp</span><span>SQLite</span><span>Парсинг</span><span>API и вебхуки</span></div>
+        <h3 style="margin-top:2rem">Остальное</h3>
+        <p class="ag-note">Если нужен другой инструмент, скажите заранее. Быстро разберусь и честно скажу, берусь или нет.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="s-faq" class="faq">
+    <p class="label reveal"><span>05</span> ВОПРОСЫ</p>
+    <h2 class="h2 reveal">Частые <span class="red">вопросы</span></h2>
+    <div class="split faqs">
+      <div class="qa reveal">
+        <details><summary>Вы действительно работаете под нашим брендом?</summary><p>Да. Я не упоминаю себя в проекте и не общаюсь с вашим клиентом, если вы сами этого не попросите.</p></details>
+        <details><summary>Как оплачиваем работу?</summary><p>Чаще всего фикс за задачу или за этап, с предоплатой за этап. Если вам удобнее почасовая оплата, обсудим. Договорённости фиксируем письменно до старта.</p></details>
+        <details><summary>У клиента нет ТЗ. Что делать?</summary><p>Пришлите всё, что есть: бриф, примеры, пожелания. Я задам вопросы и соберу краткое ТЗ, чтобы мы одинаково понимали результат.</p></details>
+        <details><summary>Какие сроки?</summary><p>Лендинг обычно от 3 дней. Для бота и интеграций называю срок после оценки задачи, до начала работы.</p></details>
+        <details><summary>Что после сдачи, если нужны правки?</summary><p>Исправления по согласованному ТЗ — бесплатно. Новые функции и изменения объёма оцениваю отдельно.</p></details>
+        <details><summary>Вы используете ИИ при разработке?</summary><p>Да, как рабочий инструмент. Это ускоряет работу, но ответственность за результат на мне: я проверяю код, тестирую сценарии и сдаю то, что работает.</p></details>
+      </div>
+      <aside class="ask reveal">
+        <h3>Есть <span class="red">задача?</span></h3>
+        <p>Напишите в Telegram: что нужно сделать, к какому сроку и в каком формате удобно работать. Отвечу с оценкой.</p>
+        <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="btn primary"><span>Написать в Telegram</span></a>
+        <a href="#clients" class="btn ghost" data-mode-link="client"><span>Для клиентов</span></a>
+      </aside>
+    </div>
+  </section>
+
+  <!-- CONTACTS -->
+  <section id="s-contacts" class="contacts">
+    <div class="glow2" aria-hidden="true"></div>
+    <p class="label reveal"><span>06</span> КОНТАКТЫ</p>
+    <h2 class="big reveal">Давайте<br><span class="red">поработаем</span></h2>
+    <p class="sub reveal">Напишите, что нужно сделать, и я отвечу с оценкой срока и цены. Небольшую задачу можно взять на пробу.</p>
+    <div class="ctas">
+      <a href="https://t.me/Patisonooochik" target="_blank" rel="noopener" class="cta main reveal">
+        <small>TELEGRAM</small><strong>@Patisonooochik</strong>
+        <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+      </a>
+      <a href="https://t.me/letpatsonwork" target="_blank" rel="noopener" class="cta reveal">
+        <small>КАНАЛ</small><strong>@letpatsonwork</strong>
+        <span class="arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+      </a>
+    </div>
+    <footer><span>© 2026 Максим (Patson)</span><span class="flinks"><a href="#clients" data-mode-link="client">Для клиентов</a><a href="https://t.me/Patisonooochik" target="_blank" rel="noopener">Telegram</a><a href="https://t.me/letpatsonwork" target="_blank" rel="noopener">Канал</a></span><a href="#s-hero">Наверх <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a></footer>
+  </section>
+</div>
 </main>
 
 <a href="https://kwork.ru/website-development/55238346/sdelayu-prodayushchiy-lending-pod-klyuch-za-2-dnya?ref=25377769" target="_blank" rel="noopener" class="sticky" id="sticky">Заказать на Kwork <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -365,5 +549,6 @@
 
 <script src="works.js"></script>
 <script src="script.js"></script>
+<script src="modes.js"></script>
 </body>
 </html>
