@@ -1,0 +1,26 @@
+/* Страница «Для агентств»: только то, чего нет в style.css */
+.ag-hero{position:relative;min-height:92svh;display:flex;align-items:center;padding:140px var(--pad) 80px}
+.ag-hero-inner{position:relative;z-index:2;max-width:1000px}
+.ag-title{font-size:clamp(2.4rem,6.2vw,6rem);letter-spacing:-.05em;line-height:1;font-weight:900;margin-bottom:1.6rem;animation:up 1s .2s both}
+.ag-hero .tagline{animation:up 1s .5s both}
+.ag-hero .actions{animation:up 1s .7s both}
+.ag-hero .trust{animation:up 1s .9s both}
+.ag-sec{padding:clamp(60px,8vw,120px) var(--pad)}
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:4rem}
+.ag-grid .plan .for{min-height:0;margin-bottom:1.4rem}
+.ag-list{display:grid;gap:1.1rem;max-width:44em}
+.ag-list li{position:relative;padding-left:1.6rem;color:#cfcfcf;line-height:1.55}
+.ag-list li::before{content:"";position:absolute;left:0;top:.55em;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--redglow)}
+.ag-list b{color:#fff}
+.ag-note{color:var(--muted);max-width:26em}
+.ag .contacts .big{font-size:clamp(3rem,9vw,8.5rem)}
+.ag .ctas{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.ag .ctas .cta{margin-top:0}
+.ag .pf-grid .pf{cursor:default}
+.ag .pf-grid a.pf{cursor:pointer}
+.ag .nav nav a{white-space:nowrap}
+@media (max-width:700px){
+  .ag-hero{padding-top:110px;min-height:auto}
+  .nav nav{display:none}
+  .ag-hero .actions .btn{grid-column:1/-1;width:100%;justify-content:center;white-space:nowrap}
+}
